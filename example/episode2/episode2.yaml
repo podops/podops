@@ -1,0 +1,31 @@
+apiVersion: v1
+kind: episode
+metadata:
+  name: episode2
+  guid: 91c242e29ad4
+  parent: aaa94297acfc
+  date: Tue, 15 Jun 2021 05:34:42 +0000
+  labels:
+    block: "no"
+    episode: "2"
+    explicit: "no"
+    season: "1"
+    type: Full
+
+description:
+  title: This is the second episode
+  summary: The summary of the episode
+  episodeText: A long-form description of the episode with notes etc.
+  link:
+    uri: https://podops.dev/minimalpodcast/episode2
+    rel: external
+  duration: 1
+
+image:
+  uri: https://storage.googleapis.com/storage.podops.dev/assets/episode.png
+  rel: import
+
+enclosure:
+  uri: https://storage.googleapis.com/storage.podops.dev/assets/clip1.mp3
+  rel: import
+  type: audio/mpeg

@@ -1,0 +1,68 @@
+- name: upgrade all
+  become: true
+  yum:
+    name: "*"
+    state: latest
+
+- name: install additional packages
+  become: true
+  yum:
+    name: "{{ packages }}"
+    state: present
+  vars:
+    packages:
+      - bind-utils
+      - podman
+
+- name: create podops user
+  become: true
+  user:
+    name: "{{ podops_user }}"
+    uid: "{{ podops_user_uid }}"
+
+- name: upload ssh key
+  become: true
+  authorized_key:
+    user: "{{ podops_user }}"
+    state: present
+    key: "{{ lookup('file', '~/.ssh/podops.pub') }}"
+
+- name: create config and data locations
+  become: true
+  file:
+    path: "{{ item }}"
+    state: directory
+    owner: "{{ podops_user }}"
+    group: "{{ podops_user }}"
+  with_list:
+    - "{{ config_root }}/caddy"
+    - "{{ data_root }}/caddy"
+    - "{{ data_root }}/storage"
+    - "{{ data_root }}/public/default"
+
+- name: create a default configuration
+  template:
+    src: ../files/Caddyfile
+    dest: "{{ config_root }}/caddy/Caddyfile"
+    owner: "{{ podops_user }}"
+    group: "{{ podops_user }}"
+    mode: "644"
+    force: no
+
+- name: google cloud credentials
+  template:
+    src: ../files/{{ gcloud_credentials_file }}
+    dest: "{{ config_root }}/credentials.json"
+    owner: "{{ podops_user }}"
+    group: "{{ podops_user }}"
+    mode: "644"
+    force: no
+
+- name: create a default static site
+  template:
+    src: ../files/index.html
+    dest: "{{ data_root }}/public/default/index.html"
+    owner: "{{ podops_user }}"
+    group: "{{ podops_user }}"
+    mode: "644"
+    force: no

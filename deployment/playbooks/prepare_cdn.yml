@@ -1,0 +1,5 @@
+- name: create a podops cdn instance
+  hosts: all
+
+  roles:
+    - role: ../roles/prepare_cdn

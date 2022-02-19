@@ -1,0 +1,16 @@
+localhost {
+	encode zstd gzip
+	root * ../../data/public/default
+
+	reverse_proxy /a/v1/* http://localhost:8080
+
+	route {
+		cdn_mapping
+		uri replace /minimalpodcast /minimalpodcast/public
+		file_server
+	}
+	
+	log {
+		output file ../../data/logs/cdn.log
+    }
+}

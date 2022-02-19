@@ -1,0 +1,31 @@
+apiVersion: v1
+kind: episode
+metadata:
+  name: soundcheck
+  guid: 6d1048a48504
+  parent: aaa94297acfc
+  date: Fri, 04 Jun 2021 20:10:35 +0000
+  labels:
+    block: "no"
+    episode: "1"
+    explicit: "no"
+    season: "1"
+    type: Full
+
+description:
+  title: Episode 1
+  summary: Only a first episode to test the feed
+  episodeText: This is not really an episode but just a link to a short default/placeholder mp3 to test the feed.
+  link:
+    uri: https://podops.dev/minimalpodcast/soundcheck
+    rel: external
+  duration: 1
+
+image:
+  uri: episode.png
+  rel: local
+
+enclosure:
+  uri: clip1.mp3
+  rel: local
+  type: audio/mpeg

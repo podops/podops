@@ -1,0 +1,4 @@
+{{ inventory_hostname }} {
+	root * /data/public/default
+	file_server
+}

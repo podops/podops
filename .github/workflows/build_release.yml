@@ -1,0 +1,108 @@
+name: build_release
+
+on:
+  push:
+    branches: [release]
+
+env:
+  API_IMAGE_NAME: api
+  CDN_IMAGE_NAME: cdn
+  VERSION: 0.7.4
+  REGISTRY: ${{ secrets.REGISTRY }}
+  REGISTRY_HOSTNAME: eu.gcr.io
+  GITHUB_SHA: ${{ github.sha }}
+
+jobs:
+  build_release:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: setup go
+        uses: actions/setup-go@v2
+        with:
+          go-version: ^1.17
+        id: go
+
+      - name: checkout code
+        uses: actions/checkout@v2
+
+      - name: authenticate gcloud SDK
+        uses: google-github-actions/auth@v0
+        with:
+          credentials_json: "${{ secrets.GCP_SA_KEY }}"
+        id: auth
+
+      - name: setup gcloud SDK
+        uses: google-github-actions/setup-gcloud@v0
+
+      - run: gcloud auth configure-docker
+
+      - name: prepare release
+        run: |
+          mkdir -p latest
+          echo "$VERSION-$GITHUB_SHA" > latest/version.txt
+
+      - name: build the cli
+        run: |
+          cd cmd/cli
+          go get -v -t -d ./...
+          GOOS=linux GOARCH=amd64 go build -o po cli.go && chmod +x po && gzip po && mv po.gz ../../latest/linux-$VERSION.gz
+          GOOS=darwin GOARCH=amd64 go build -o po cli.go && chmod +x po && gzip po && mv po.gz ../../latest/mac-amd64-$VERSION.gz
+          GOOS=darwin GOARCH=arm64 go build -o po cli.go && chmod +x po && gzip po && mv po.gz ../../latest/mac-arm64-$VERSION.gz
+          GOOS=windows GOARCH=amd64 go build -o po.exe cli.go && gzip po.exe && mv po.exe.gz ../../latest/win-$VERSION.zip
+
+      - name: rename latest cli builds
+        run: |
+          cp -f latest/linux-$VERSION.gz latest/linux-latest.gz
+          cp -f latest/mac-amd64-$VERSION.gz latest/mac-amd64-latest.gz
+          cp -f latest/mac-arm64-$VERSION.gz latest/mac-arm64-latest.gz
+          cp -f latest/win-$VERSION.zip latest/win-latest.zip
+          ls -la latest
+
+      - name: upload cli archives
+        uses: google-github-actions/upload-cloud-storage@v0
+        with:
+          path: latest
+          destination: ${{ secrets.DOWNLOAD_BUCKET }}
+
+      - name: build the api service
+        run: |
+          cd cmd/api
+          go get -v -t -d ./...
+          GOOS=linux GOARCH=amd64 go build -o svc main.go && chmod +x svc
+
+      - name: build the api container
+        run: |
+          cd cmd/api
+          docker build -t "$REGISTRY_HOSTNAME"/"$REGISTRY"/"$API_IMAGE_NAME":"$GITHUB_SHA" \
+            --build-arg GITHUB_SHA="$GITHUB_SHA" \
+            --build-arg GITHUB_REF="$GITHUB_REF" .
+
+      - name: build the cdn service
+        run: |
+          cd cmd/cdn
+          go get -v -t -d ./...
+          GOOS=linux GOARCH=amd64 go build -o svc main.go && chmod +x svc
+
+      - name: build the cdn container
+        run: |
+          cd cmd/cdn
+          docker build -t "$REGISTRY_HOSTNAME"/"$REGISTRY"/"$CDN_IMAGE_NAME":"$GITHUB_SHA" \
+            --build-arg GITHUB_SHA="$GITHUB_SHA" \
+            --build-arg GITHUB_REF="$GITHUB_REF" .
+
+      - name: push the api container
+        run: |
+          docker push $REGISTRY_HOSTNAME/$REGISTRY/$API_IMAGE_NAME:$GITHUB_SHA
+          docker tag $REGISTRY_HOSTNAME/$REGISTRY/$API_IMAGE_NAME:$GITHUB_SHA $REGISTRY_HOSTNAME/$REGISTRY/$API_IMAGE_NAME:latest
+          docker tag $REGISTRY_HOSTNAME/$REGISTRY/$API_IMAGE_NAME:$GITHUB_SHA $REGISTRY_HOSTNAME/$REGISTRY/$API_IMAGE_NAME:$VERSION
+          docker push $REGISTRY_HOSTNAME/$REGISTRY/$API_IMAGE_NAME:latest
+          docker push $REGISTRY_HOSTNAME/$REGISTRY/$API_IMAGE_NAME:$VERSION
+
+      - name: push the cdn container
+        run: |
+          docker push $REGISTRY_HOSTNAME/$REGISTRY/$CDN_IMAGE_NAME:$GITHUB_SHA
+          docker tag $REGISTRY_HOSTNAME/$REGISTRY/$CDN_IMAGE_NAME:$GITHUB_SHA $REGISTRY_HOSTNAME/$REGISTRY/$CDN_IMAGE_NAME:latest
+          docker tag $REGISTRY_HOSTNAME/$REGISTRY/$CDN_IMAGE_NAME:$GITHUB_SHA $REGISTRY_HOSTNAME/$REGISTRY/$CDN_IMAGE_NAME:$VERSION
+          docker push $REGISTRY_HOSTNAME/$REGISTRY/$CDN_IMAGE_NAME:latest
+          docker push $REGISTRY_HOSTNAME/$REGISTRY/$CDN_IMAGE_NAME:$VERSION

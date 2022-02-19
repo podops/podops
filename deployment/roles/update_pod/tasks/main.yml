@@ -1,0 +1,61 @@
+- name: install command line utiliy
+  become: true
+  shell: >
+    curl -L {{ podops_cli_url }} | gunzip -c > /usr/local/bin/{{ podops_cli_name }}
+
+    chmod +x /usr/local/bin/{{ podops_cli_name }}
+
+- name: update container images
+  become: true
+  shell: >
+    {{container_util}} pull {{ cdn_image }}:{{ cdn_version }}
+
+    {{container_util}} pull {{ api_image }}:{{ api_version }}
+
+- name: stop and remove the pod
+  become: true
+  ignore_errors: true
+  shell: >
+    {{container_util}} pod stop {{ podops_namespace }}
+
+    {{container_util}} pod rm {{ podops_namespace }}
+
+- name: update cdn configuration
+  template:
+    src: ../files/Caddyfile
+    dest: "{{ config_root }}/caddy/Caddyfile"
+    owner: "{{ podops_user }}"
+    group: "{{ podops_user }}"
+    mode: "644"
+    force: yes
+
+- name: update api configuration
+  template:
+    src: ../files/.podops/config
+    dest: "{{ config_root }}/podops/config"
+    owner: "{{ podops_user }}"
+    group: "{{ podops_user }}"
+    mode: "644"
+    force: yes
+
+- name: create api container
+  become: true
+  shell: >
+    {{container_util}} create --name api --restart always \
+    --pod new:{{ podops_namespace }} \
+    -p 80:80 -p 443:443 \
+    -v /opt/config:/config -v /opt/data:/data \
+    {{ api_image }}:{{ api_version }}
+
+- name: create cdn container
+  become: true
+  shell: >
+    {{container_util}} create --name cdn --restart always \
+    --pod {{ podops_namespace }} \
+    -v /opt/config:/config -v /opt/data:/data \
+    {{ cdn_image }}:{{ cdn_version }}
+
+- name: start the pod
+  become: true
+  shell: >
+    {{container_util}} pod start {{ podops_namespace }}

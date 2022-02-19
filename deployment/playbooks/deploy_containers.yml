@@ -1,0 +1,5 @@
+- name: deploy containers
+  hosts: all
+
+  roles:
+    - role: ../roles/update_pod

@@ -1,0 +1,48 @@
+apiVersion: v1
+kind: show
+metadata:
+  name: minimalpodcast
+  guid: aaa94297acfc
+  date: Fri, 04 Jun 2021 20:10:24 +0000
+  labels:
+    block: "no"
+    complete: "no"
+    explicit: "no"
+    language: en_US
+    type: Episodic
+
+description:
+  title: podops minimal podcast example
+  summary: |
+    # A podcast not for consumption
+
+    You have been warned.
+
+    Podops is a podcast infrastructure platform that provides functionallity to automate your 
+    podcast creation workflow. It allows you to create the podcast feed and delivers media 
+    assets like MP3s and images to podcast clients.
+
+    ## About this example
+    See [https://github.com/podops/podops/example/README.md](https://github.com/podops/podops/blob/main/README.md) for a description how to build a podcast feed.
+
+  link:
+    uri: https://podops.dev/minimalpodcast
+    rel: external
+
+  category:
+    - name: Technology
+      subcategory:
+        - Podcasting
+    - name: Business
+      subcategory:
+        - Non-Profit
+
+  owner:
+    name: podops.dev
+    email: hello@podops.dev
+  author: podops.dev
+  copyright: Transformative Services (txs.vc)
+
+image:
+  uri: cover.png
+  rel: local
