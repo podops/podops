@@ -13,7 +13,7 @@ require (
 	github.com/stretchr/testify v1.7.0
 	github.com/tcolgate/mp3 v0.0.0-20170426193717-e79c5a46d300
 	github.com/txsvc/httpservice v1.3.0
-	github.com/txsvc/stdlib/v2 v2.0.0
+	github.com/txsvc/stdlib/v2 v2.1.0
 	github.com/urfave/cli/v2 v2.3.0
 	github.com/yuin/goldmark v1.4.6
 	go.uber.org/zap v1.19.0
@@ -105,6 +105,7 @@ require (
 	github.com/prometheus/client_model v0.2.0 // indirect
 	github.com/prometheus/common v0.26.0 // indirect
 	github.com/prometheus/procfs v0.6.0 // indirect
+	github.com/rogpeppe/go-internal v1.8.1 // indirect
 	github.com/rs/xid v1.2.1 // indirect
 	github.com/russross/blackfriday/v2 v2.1.0 // indirect
 	github.com/samfoo/ansi v0.0.0-20160124022901-b6bd2ded7189 // indirect
