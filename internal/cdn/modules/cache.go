@@ -45,7 +45,7 @@ func serveAndCache(parent, path, metric string, w http.ResponseWriter, r *http.R
 	w.Header().Add("cache-control", cacheControl)
 	w.Header().Add("content-type", meta.ContentType)
 	w.Header().Add("content-length", fmt.Sprintf("%d", meta.Size))
-	w.Header().Add("x-served-by", config.ServerString)
+	w.Header().Add("x-served-by", config.ServerString) // FIXME change to a podops name?
 
 	file, err := openFile(path, w)
 	if err != nil {
