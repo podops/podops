@@ -75,13 +75,6 @@ func setupCommands() []*cli.Command {
 			Flags:     assembleFlags(),
 		},
 		{
-			Name:      "generate",
-			Usage:     "Create markdown files for static website generators",
-			UsageText: "generate [path] [target]",
-			Category:  basicCommandsGroup,
-			Action:    cmd.GenerateCommand,
-		},
-		{
 			Name:      "sync",
 			Usage:     "Sync podcast repository to the CDN",
 			UsageText: "sync [path]",
@@ -177,11 +170,6 @@ func buildFlags() []cli.Flag {
 			Name:    "build-only",
 			Usage:   "Only build the feed without collecting the podcast resources",
 			Aliases: []string{"b"},
-		},
-		&cli.BoolFlag{
-			Name:    "generate",
-			Usage:   "Create markdown files for static website generators",
-			Aliases: []string{"g"},
 		},
 	}
 	return f

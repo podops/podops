@@ -14,7 +14,7 @@ const (
 
 func TestBuildOnly(t *testing.T) {
 
-	name, err := Build(context.TODO(), rootDir, false, true, false, true)
+	name, err := Build(context.TODO(), rootDir, false, true, true)
 	if err != nil {
 		fmt.Println(err)
 	}
@@ -35,7 +35,7 @@ func TestAssembleAfterBuildOnly(t *testing.T) {
 
 func TestBuildAndAssemble(t *testing.T) {
 
-	name, err := Build(context.TODO(), rootDir, false, false, false, true)
+	name, err := Build(context.TODO(), rootDir, false, false, true)
 	if err != nil {
 		fmt.Println(err)
 	}

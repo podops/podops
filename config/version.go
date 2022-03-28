@@ -16,9 +16,9 @@ const (
 	// MajorVersion of the API
 	MajorVersion = 0
 	// MinorVersion of the API
-	MinorVersion = 7
+	MinorVersion = 8
 	// FixVersion of the API
-	FixVersion = 4
+	FixVersion = 0
 
 	CmdLineName     = "po"
 	ProjectName     = "podops"

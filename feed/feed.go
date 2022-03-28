@@ -50,7 +50,7 @@ func init() {
 }
 
 // Build gathers all podcast resources and builds the feed.xml
-func Build(ctx context.Context, root string, validateOnly, buildOnly, generateMarkdown, purge bool) (string, error) {
+func Build(ctx context.Context, root string, validateOnly, buildOnly, purge bool) (string, error) {
 	var episodes EpisodeList
 	episodeLookup := make(map[string]*podops.Episode)
 	episodePath := make(map[string]string)
@@ -187,13 +187,6 @@ func Build(ctx context.Context, root string, validateOnly, buildOnly, generateMa
 			return show.Metadata.Name, err
 		}
 		feed.AddItem(item)
-
-		// create a *.md stub for the static website
-		if generateMarkdown {
-			if err := CreateEpisodeMarkdown(assetPath, assetPath, e); err != nil {
-				return show.Metadata.Name, err
-			}
-		}
 	}
 
 	if validateOnly {

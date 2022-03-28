@@ -29,9 +29,8 @@ func BuildCommand(c *cli.Context) error {
 	validateOnly := boolFlag(c, "validate") // --validate
 	cleanFirst := boolFlag(c, "clean")      // --clean
 	buildOnly := boolFlag(c, "build-only")  // --build-only
-	genMarkdown := boolFlag(c, "generate")  // --generate
 
-	name, err := feed.Build(context.TODO(), root, validateOnly, buildOnly, genMarkdown, cleanFirst)
+	name, err := feed.Build(context.TODO(), root, validateOnly, buildOnly, cleanFirst)
 	if err != nil {
 		return err
 	}
@@ -60,38 +59,6 @@ func AssembleCommand(c *cli.Context) error {
 	}
 
 	printMsg(podops.MsgAssembleSuccess)
-	return nil
-}
-
-func GenerateCommand(c *cli.Context) error {
-
-	if c.NArg() > 2 {
-		return podops.ErrInvalidNumArguments
-	}
-
-	root := "."
-	target := "."
-
-	if c.NArg() == 1 {
-		root = c.Args().First()
-		target = filepath.Join(root, config.BuildLocation)
-	} else if c.NArg() == 2 {
-		root = c.Args().First()
-		target = c.Args().Get(1)
-	} else {
-		dir, err := os.Getwd()
-		if err != nil {
-			return err
-		}
-		root = dir
-	}
-
-	err := feed.Generate(context.TODO(), root, target)
-	if err != nil {
-		return err
-	}
-
-	printMsg(podops.MsgGenerateSuccess)
 	return nil
 }
 
