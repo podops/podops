@@ -7,7 +7,7 @@ on:
 env:
   API_IMAGE_NAME: api
   CDN_IMAGE_NAME: cdn
-  VERSION: 0.7.4
+  VERSION: 0.10.0
   REGISTRY: ${{ secrets.REGISTRY }}
   REGISTRY_HOSTNAME: eu.gcr.io
   GITHUB_SHA: ${{ github.sha }}
@@ -20,7 +20,7 @@ jobs:
       - name: setup go
         uses: actions/setup-go@v2
         with:
-          go-version: ^1.17
+          go-version: ^1.16
         id: go
 
       - name: checkout code
