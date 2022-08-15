@@ -9,7 +9,7 @@ import (
 )
 
 const (
-	rootDir = "../example/"
+	rootDir = "../../example/"
 )
 
 func TestBuildOnly(t *testing.T) {
