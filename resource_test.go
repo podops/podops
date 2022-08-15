@@ -1,7 +1,6 @@
 package podops
 
 import (
-	"fmt"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -112,6 +111,4 @@ func TestShowResource(t *testing.T) {
 
 	v := show.Validate("show_test", validate.NewValidator())
 	assert.Equal(t, 1, v.Errors)
-
-	fmt.Println(v.Report())
 }
