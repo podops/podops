@@ -101,6 +101,7 @@ type (
 		Metadata    Metadata        `json:"metadata" yaml:"metadata" binding:"required"`       // REQUIRED
 		Description ShowDescription `json:"description" yaml:"description" binding:"required"` // REQUIRED
 		Image       AssetRef        `json:"image" yaml:"image" binding:"required"`             // REQUIRED 'channel.itunes.image'
+		Episodes    []Episode       `json:"episodes,omitempty" yaml:"episodes,omitempty"`      // OPTIONAL used only to import a feed
 	}
 
 	// Episode holds all metadata related to a podcast episode
@@ -222,6 +223,7 @@ func DefaultShowMetadata() map[string]string {
 }
 
 // DefaultEpisodeMetadata creates a default set of labels etc for a Episode resource
+//
 //	season: 	<season number> OPTIONAL 'item.itunes.season'
 //	episode:	<episode number> REQUIRED 'item.itunes.episode'
 //	explicit:	True | False REQUIRED 'channel.itunes.explicit'
