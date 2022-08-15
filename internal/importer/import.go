@@ -54,7 +54,7 @@ func ImportPodcastFeed(feedUrl string) (*podops.Show, error) {
 	//show.Episodes = importEpisodes(feed)
 
 	// import all episodes
-	show.Episodes = make([]podops.Episode, len(feed.Items))
+	show.Episodes = make(podops.EpisodeList, len(feed.Items))
 	for i, item := range feed.Items {
 		show.Episodes[i] = importEpisode(item)
 	}
@@ -85,7 +85,7 @@ func importShow(feed *gofeed.Feed) podops.Show {
 	return show
 }
 
-func importEpisode(item *gofeed.Item) podops.Episode {
+func importEpisode(item *gofeed.Item) *podops.Episode {
 	episode := podops.Episode{
 		APIVersion: config.Version,
 		Kind:       podops.ResourceEpisode,
@@ -99,7 +99,7 @@ func importEpisode(item *gofeed.Item) podops.Episode {
 		Enclosure:   importEnclosureAssetRef(item),
 	}
 
-	return episode
+	return &episode
 }
 
 func importEpisodeDescription(item *gofeed.Item) podops.EpisodeDescription {

@@ -21,17 +21,6 @@ var (
 	mediaTypeMap map[string]rss.EnclosureType
 )
 
-type (
-	// EpisodeList holds the list of valid episodes that will be added to a podcast
-	EpisodeList []*podops.Episode
-)
-
-func (e EpisodeList) Len() int      { return len(e) }
-func (e EpisodeList) Swap(i, j int) { e[i], e[j] = e[j], e[i] }
-func (e EpisodeList) Less(i, j int) bool {
-	return e[i].PublishDateTimestamp() > e[j].PublishDateTimestamp() // sorting direction is descending
-}
-
 func init() {
 	mediaTypeMap = make(map[string]rss.EnclosureType)
 	mediaTypeMap["audio/x-m4a"] = rss.M4A
@@ -45,7 +34,7 @@ func init() {
 
 // Build gathers all podcast resources and builds the feed.xml
 func Build(ctx context.Context, root string, validateOnly, buildOnly, purge bool) (string, error) {
-	var episodes EpisodeList
+	var episodes podops.EpisodeList
 	episodeLookup := make(map[string]*podops.Episode)
 	episodePath := make(map[string]string)
 

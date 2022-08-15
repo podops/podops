@@ -101,7 +101,7 @@ type (
 		Metadata    Metadata        `json:"metadata" yaml:"metadata" binding:"required"`       // REQUIRED
 		Description ShowDescription `json:"description" yaml:"description" binding:"required"` // REQUIRED
 		Image       AssetRef        `json:"image" yaml:"image" binding:"required"`             // REQUIRED 'channel.itunes.image'
-		Episodes    []Episode       `json:"episodes,omitempty" yaml:"episodes,omitempty"`      // OPTIONAL used only to import a feed
+		Episodes    EpisodeList     `json:"episodes,omitempty" yaml:"episodes,omitempty"`      // OPTIONAL used only to import a feed
 	}
 
 	// Episode holds all metadata related to a podcast episode
@@ -113,6 +113,9 @@ type (
 		Image       AssetRef           `json:"image" yaml:"image" binding:"required"`             // REQUIRED 'item.itunes.image'
 		Enclosure   AssetRef           `json:"enclosure" yaml:"enclosure" binding:"required"`     // REQUIRED
 	}
+
+	// EpisodeList holds the list of valid episodes that can be added to a podcast
+	EpisodeList []*Episode
 
 	// ShowDescription holds essential show metadata
 	ShowDescription struct {
@@ -195,6 +198,13 @@ func (e *Episode) GUID() string {
 // ParentGUID is a convenience method to access the resources parent guid
 func (e *Episode) Parent() string {
 	return e.Metadata.Parent
+}
+
+// sort an EpisodeList
+func (e EpisodeList) Len() int      { return len(e) }
+func (e EpisodeList) Swap(i, j int) { e[i], e[j] = e[j], e[i] }
+func (e EpisodeList) Less(i, j int) bool {
+	return e[i].PublishDateTimestamp() > e[j].PublishDateTimestamp() // sorting direction is descending
 }
 
 // LocalNamePart returns the part after the last /, if any
