@@ -2,6 +2,7 @@ package rss
 
 import (
 	"bytes"
+	"encoding/xml"
 	"errors"
 	"fmt"
 	"io"
@@ -11,6 +12,7 @@ import (
 
 	"github.com/podops/podops"
 	"github.com/podops/podops/config"
+	"github.com/podops/podops/internal"
 )
 
 // iTunes Specifications: https://help.apple.com/itc/podcasts_connect/#/itcb54353390
@@ -27,6 +29,16 @@ const (
 	enclosureDefault = "application/octet-stream"
 )
 
+// FIXME: this is a weird construct, replace maybe ?
+var encoder = func(w io.Writer, o interface{}) error {
+	e := xml.NewEncoder(w)
+	e.Indent("", "  ")
+	if err := e.Encode(o); err != nil {
+		return podops.ErrBuildFailed
+	}
+	return nil
+}
+
 // New instantiates a podcast with required parameters.
 //
 // Nil-able fields are optional but recommended as they are formatted to the expected proper formats.
@@ -37,12 +49,12 @@ func New(title, link string, pubDate, lastBuildDate *time.Time) Channel {
 		Link:          link,
 		Description:   title,
 		Generator:     fmt.Sprintf("podops %s (https://github.com/podops/podops)", config.VersionString),
-		PubDate:       parseDateRFC1123Z(pubDate),
-		LastBuildDate: parseDateRFC1123Z(lastBuildDate),
+		PubDate:       internal.ParseDateRFC1123Z(pubDate),
+		LastBuildDate: internal.ParseDateRFC1123Z(lastBuildDate),
 		Language:      "en",
 
 		// setup dependency (could inject later)
-		encode: encoder,
+		encode: encoder, // FIXME: this is a weird construct, replace maybe ?
 	}
 }
 
@@ -79,7 +91,6 @@ func (p *Channel) AddAtomLink(href string) {
 //
 // Note that Apple iTunes has a specific list of categories that only can be
 // used and will invalidate the feed if deviated from the list.
-//
 func (p *Channel) AddCategory(category string, subCategories []string) {
 	if len(category) == 0 {
 		return
@@ -136,33 +147,32 @@ func (p *Channel) AddImage(url string) {
 //
 // Article minimal requirements are:
 //
-//   * Title
-//   * Description
-//   * Link
+//   - Title
+//   - Description
+//   - Link
 //
 // Audio, Video and Downloads minimal requirements are:
 //
-//   * Title
-//   * Description
-//   * Enclosure (HREF, Type and Length all required)
+//   - Title
+//   - Description
+//   - Enclosure (HREF, Type and Length all required)
 //
 // The following fields are always overwritten (don't set them):
 //
-//   * GUID
-//   * PubDateFormatted
-//   * AuthorFormatted
-//   * Enclosure.TypeFormatted
-//   * Enclosure.LengthFormatted
+//   - GUID
+//   - PubDateFormatted
+//   - AuthorFormatted
+//   - Enclosure.TypeFormatted
+//   - Enclosure.LengthFormatted
 //
 // Recommendations:
 //
-//   * Just set the minimal fields: the rest get set for you.
-//   * Always set an Enclosure.Length, to be nice to your downloaders.
-//   * Follow Apple's best practices to enrich your podcasts:
+//   - Just set the minimal fields: the rest get set for you.
+//   - Always set an Enclosure.Length, to be nice to your downloaders.
+//   - Follow Apple's best practices to enrich your podcasts:
 //     https://help.apple.com/itc/podcasts_connect/#/itc2b3780e76
-//   * For specifications of itunes tags, see:
+//   - For specifications of itunes tags, see:
 //     https://help.apple.com/itc/podcasts_connect/#/itcb54353390
-//
 func (p *Channel) AddItem(i *Item) (int, error) {
 	// initial guards for required fields
 	if len(i.Title) == 0 || len(i.Description) == 0 {
@@ -184,7 +194,7 @@ func (p *Channel) AddItem(i *Item) (int, error) {
 
 	// corrective actions and overrides
 
-	i.PubDateFormatted = parseDateRFC1123Z(i.PubDate)
+	i.PubDateFormatted = internal.ParseDateRFC1123Z(i.PubDate)
 	i.AuthorFormatted = parseAuthorNameEmail(i.Author)
 	if i.Enclosure != nil {
 		if len(i.GUID) == 0 {
@@ -234,14 +244,14 @@ func (p *Channel) AddItem(i *Item) (int, error) {
 //
 // UTC time is used by default.
 func (p *Channel) AddPubDate(datetime *time.Time) {
-	p.PubDate = parseDateRFC1123Z(datetime)
+	p.PubDate = internal.ParseDateRFC1123Z(datetime)
 }
 
 // AddLastBuildDate adds the datetime as a parsed PubDate.
 //
 // UTC time is used by default.
 func (p *Channel) AddLastBuildDate(datetime *time.Time) {
-	p.LastBuildDate = parseDateRFC1123Z(datetime)
+	p.LastBuildDate = internal.ParseDateRFC1123Z(datetime)
 }
 
 // AddSubTitle adds the iTunes subtitle that is displayed with the title
@@ -344,7 +354,7 @@ func (i *Item) AddImage(url string) {
 // UTC time is used by default.
 func (i *Item) AddPubDate(datetime *time.Time) {
 	i.PubDate = datetime
-	i.PubDateFormatted = parseDateRFC1123Z(i.PubDate)
+	i.PubDateFormatted = internal.ParseDateRFC1123Z(i.PubDate)
 }
 
 // AddSummary adds the iTunes summary.
@@ -369,7 +379,7 @@ func (i *Item) AddDuration(durationInSeconds int64) {
 	if durationInSeconds <= 0 {
 		return
 	}
-	i.IDuration = parseDuration(durationInSeconds)
+	i.IDuration = internal.ParseDuration(durationInSeconds)
 }
 
 // String returns the MIME type encoding of the specified EnclosureType.
@@ -392,4 +402,15 @@ func (et EnclosureType) String() string {
 		return "document/x-epub"
 	}
 	return enclosureDefault
+}
+
+func parseAuthorNameEmail(a *Author) string {
+	var author string
+	if a != nil {
+		author = a.Email
+		if len(a.Name) > 0 {
+			author = fmt.Sprintf("%s (%s)", a.Email, a.Name)
+		}
+	}
+	return author
 }

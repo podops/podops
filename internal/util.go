@@ -2,6 +2,7 @@ package internal
 
 import (
 	"fmt"
+	"time"
 )
 
 // ParseDuration converts seconds duration into HH:MM:SS format
@@ -25,4 +26,12 @@ func ParseDuration(duration int64) string {
 
 	// 00:MM:SS
 	return fmt.Sprintf("00:%02d:%02d", m, s)
+}
+
+// ParseDateRFC1123Z returns a RFC1123Z formatted string
+func ParseDateRFC1123Z(t *time.Time) string {
+	if t != nil && !t.IsZero() {
+		return t.Format(time.RFC1123Z)
+	}
+	return time.Now().UTC().Format(time.RFC1123Z)
 }
