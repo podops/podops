@@ -1,8 +1,7 @@
-package feed
+package builder
 
 import (
 	"bytes"
-	"fmt"
 	"time"
 
 	"github.com/yuin/goldmark"
@@ -105,35 +104,6 @@ func transformToItem(e *podops.Episode) (*rss.Item, error) {
 	}
 
 	return ef, nil
-}
-
-// ParseDuration converts seconds duration into HH:MM:SS format
-func ParseDuration(duration int64) string {
-	h := duration / 3600
-	duration = duration % 3600
-
-	m := duration / 60
-	duration = duration % 60
-
-	s := duration
-
-	// HH:MM:SS
-	if h > 9 {
-		return fmt.Sprintf("%02d:%02d:%02d", h, m, s)
-	}
-
-	// H:MM:SS
-	if h > 0 {
-		return fmt.Sprintf("%d:%02d:%02d", h, m, s)
-	}
-
-	// MM:SS
-	if m > 9 {
-		return fmt.Sprintf("%02d:%02d", m, s)
-	}
-
-	// M:SS
-	return fmt.Sprintf("%d:%02d", m, s)
 }
 
 func renderMarkdown(md string) (string, error) {

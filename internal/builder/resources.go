@@ -1,10 +1,9 @@
-package feed
+package builder
 
 import (
 	"context"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -129,7 +128,7 @@ func ValidateResource(ctx context.Context, parent, root string, encl *podops.Ass
 func LoadAssetRef(path string) (*podops.AssetRef, error) {
 	var asset podops.AssetRef
 
-	data, err := ioutil.ReadFile(path)
+	data, err := os.ReadFile(path)
 	if err != nil {
 		return nil, err
 	}

@@ -1,9 +1,8 @@
-package feed
+package builder
 
 import (
 	"context"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"sort"
@@ -16,11 +15,6 @@ import (
 	"github.com/podops/podops/config"
 	"github.com/podops/podops/internal/loader"
 	"github.com/podops/podops/internal/rss"
-)
-
-const (
-	DefaultFeedName = "feed.xml"
-	DefaultShowName = "show.yaml"
 )
 
 var (
@@ -68,7 +62,7 @@ func Build(ctx context.Context, root string, validateOnly, buildOnly, purge bool
 	}
 
 	// find and load the show.yaml
-	showPath := filepath.Join(root, DefaultShowName)
+	showPath := filepath.Join(root, config.DefaultShowName)
 	rsrc, kind, parentGUID, err := loader.ReadResource(ctx, showPath)
 	if err != nil {
 		return "", err
@@ -194,8 +188,8 @@ func Build(ctx context.Context, root string, validateOnly, buildOnly, purge bool
 	}
 
 	// write the feed.xml
-	feedPath := filepath.Join(root, config.BuildLocation, DefaultFeedName)
-	return show.Metadata.Name, ioutil.WriteFile(feedPath, feed.Bytes(), 0644)
+	feedPath := filepath.Join(root, config.BuildLocation, config.DefaultFeedName)
+	return show.Metadata.Name, os.WriteFile(feedPath, feed.Bytes(), 0644)
 
 }
 
@@ -206,7 +200,7 @@ func Assemble(ctx context.Context, root string, force bool) error {
 	// FIXME flag purge does nothing
 
 	// find and load the show.yaml
-	showPath := filepath.Join(root, DefaultShowName)
+	showPath := filepath.Join(root, config.DefaultShowName)
 	_, kind, parent, err := loader.ReadResource(ctx, showPath)
 	if err != nil {
 		return err

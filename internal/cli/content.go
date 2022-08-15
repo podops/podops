@@ -12,7 +12,6 @@ import (
 
 	"github.com/podops/podops"
 	"github.com/podops/podops/config"
-	"github.com/podops/podops/feed"
 	"github.com/podops/podops/internal"
 )
 
@@ -48,7 +47,7 @@ func NewCommand(c *cli.Context) error {
 	}
 
 	// setup the default show.yaml
-	showFilePath := filepath.Join(root, feed.DefaultShowName)
+	showFilePath := filepath.Join(root, config.DefaultShowName)
 	if _, err := os.Stat(showFilePath); os.IsNotExist(err) {
 		guid := internal.CreateRandomAssetGUID()
 		show := podops.DefaultShow("NAME", "TITLE", "SUMMARY", guid, config.Settings().GetOption(config.PodopsServiceEndpointEnv), config.Settings().GetOption(config.PodopsContentEndpointEnv))

@@ -10,7 +10,9 @@ import (
 	"github.com/podops/podops"
 	"github.com/podops/podops/client"
 	"github.com/podops/podops/config"
-	"github.com/podops/podops/feed"
+
+	//"github.com/podops/podops/feed"
+	"github.com/podops/podops/internal/builder"
 	"github.com/podops/podops/internal/loader"
 )
 
@@ -30,7 +32,7 @@ func BuildCommand(c *cli.Context) error {
 	cleanFirst := boolFlag(c, "clean")      // --clean
 	buildOnly := boolFlag(c, "build-only")  // --build-only
 
-	name, err := feed.Build(context.TODO(), root, validateOnly, buildOnly, cleanFirst)
+	name, err := builder.Build(context.TODO(), root, validateOnly, buildOnly, cleanFirst)
 	if err != nil {
 		return err
 	}
@@ -53,7 +55,7 @@ func AssembleCommand(c *cli.Context) error {
 
 	force := boolFlag(c, "force") // --force
 
-	err = feed.Assemble(context.TODO(), root, force)
+	err = builder.Assemble(context.TODO(), root, force)
 	if err != nil {
 		return err
 	}
@@ -84,7 +86,7 @@ func SyncCommand(c *cli.Context) error {
 	config.UpdateClientSettings(filepath.Join(root, config.DefaultConfigFileLocation))
 
 	// find and load the show.yaml
-	showPath := filepath.Join(root, feed.DefaultShowName)
+	showPath := filepath.Join(root, config.DefaultShowName)
 	_, kind, parent, err := loader.ReadResource(context.TODO(), showPath)
 	if err != nil {
 		return err

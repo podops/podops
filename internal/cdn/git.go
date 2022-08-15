@@ -11,7 +11,6 @@ import (
 
 	"github.com/podops/podops"
 	"github.com/podops/podops/config"
-	"github.com/podops/podops/feed"
 )
 
 func CloneOrPullRepo(repo, parent string) error {
@@ -21,7 +20,7 @@ func CloneOrPullRepo(repo, parent string) error {
 	}
 
 	// swap the GUID for the short name
-	feedPath := filepath.Join(config.StorageLocation, parent, feed.DefaultFeedName)
+	feedPath := filepath.Join(config.StorageLocation, parent, config.DefaultFeedName)
 
 	// parse feed.xml and extract the name & uri
 	file, err := os.Open(feedPath)

@@ -12,8 +12,8 @@ import (
 
 	"github.com/podops/podops"
 	"github.com/podops/podops/config"
-	"github.com/podops/podops/feed"
 	"github.com/podops/podops/internal/api"
+	"github.com/podops/podops/internal/builder"
 	"github.com/podops/podops/internal/metadata"
 )
 
@@ -147,7 +147,7 @@ func Sync(parent, root string, purge bool) error {
 			return nil // skip e.g feed.xml
 		}
 
-		ar, err := feed.LoadAssetRef(path)
+		ar, err := builder.LoadAssetRef(path)
 		if err != nil {
 			return err
 		}
@@ -175,7 +175,7 @@ func Sync(parent, root string, purge bool) error {
 	}
 
 	// upload feed.xml last
-	feedFilePath := filepath.Join(root, config.BuildLocation, feed.DefaultFeedName)
+	feedFilePath := filepath.Join(root, config.BuildLocation, config.DefaultFeedName)
 	err = Upload(parent, feedFilePath)
 	if err != nil {
 		return err
