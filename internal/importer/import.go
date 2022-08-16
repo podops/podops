@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"sort"
 	"strings"
 	"time"
 
@@ -56,15 +57,35 @@ func ImportPodcastFeed(feedUrl string) (*podops.Show, error) {
 	// import the description of the show
 	show := importShow(feed)
 
-	/*
-		// import all episodes
-		show.Episodes = make(podops.EpisodeList, len(feed.Items))
-		for i, item := range feed.Items {
-			show.Episodes[i] = importEpisode(item)
+	// import all episodes
+	fixEpisodeNumbers := false
+	countFixEpisodeNumbers := 0
+	show.Episodes = make(podops.EpisodeList, len(feed.Items))
+	for i, item := range feed.Items {
+		show.Episodes[i] = importEpisode(item)
+		if show.Episodes[i].EpisodeAsInt() < 1 {
+			countFixEpisodeNumbers++
 		}
-	*/
+	}
 
-	// FIXME: sort episodes, assign numbers if not present, patch show.metadata.date if inconsistent
+	// sort episodes, descending by timestamp
+	sort.Sort(show.Episodes)
+
+	// only fix the numbering if ALL the episode numbers are empty !
+	fixEpisodeNumbers = (countFixEpisodeNumbers == len(show.Episodes))
+
+	if fixEpisodeNumbers {
+		maxEpisode := len(show.Episodes)
+		for i := range show.Episodes {
+			show.Episodes[i].Metadata.Labels[podops.LabelEpisode] = fmt.Sprintf("%d", maxEpisode)
+			maxEpisode--
+		}
+	}
+
+	// adjust the publish date if the timestamp on the show is older than the one from the latest episode
+	if show.PublishDateTimestamp() < show.Episodes[0].PublishDateTimestamp() {
+		show.Metadata.Date = show.Episodes[0].Metadata.Date
+	}
 
 	// hack
 	dumpResource(targetPath, show, true)
@@ -306,8 +327,8 @@ func importEpisodeMetadata(item *gofeed.Item) podops.Metadata {
 		}
 
 		m.Labels[podops.LabelType] = stringWithDefault(strings.Title(item.ITunesExt.EpisodeType), podops.EpisodeTypeFull)
-		m.Labels[podops.LabelSeason] = stringWithDefault(item.ITunesExt.Season, m.Labels[podops.LabelSeason])
-		m.Labels[podops.LabelEpisode] = stringWithDefault(item.ITunesExt.Episode, m.Labels[podops.LabelEpisode])
+		m.Labels[podops.LabelSeason] = stringWithDefault(item.ITunesExt.Season, "1")
+		m.Labels[podops.LabelEpisode] = stringWithDefault(item.ITunesExt.Episode, "")
 		m.Labels[podops.LabelExplicit] = stringExpect(item.ITunesExt.Explicit, "True", "False")
 		m.Labels[podops.LabelBlock] = stringExpect(item.ITunesExt.Block, "Yes", "No")
 	}

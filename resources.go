@@ -2,6 +2,7 @@ package podops
 
 import (
 	"fmt"
+	"strconv"
 	"strings"
 	"time"
 
@@ -173,6 +174,20 @@ func (s *Show) GUID() string {
 }
 
 // PublishDateTimestamp converts a RFC1123Z formatted timestamp into UNIX timestamp
+func (s *Show) PublishDateTimestamp() int64 {
+	pd := s.Metadata.Date
+	if pd == "" {
+		return 0
+	}
+	t, err := time.Parse(time.RFC1123Z, pd)
+	if err != nil {
+		return 0
+	}
+
+	return t.Unix()
+}
+
+// PublishDateTimestamp converts a RFC1123Z formatted timestamp into UNIX timestamp
 func (e *Episode) PublishDateTimestamp() int64 {
 	pd := e.Metadata.Date
 	if pd == "" {
@@ -199,6 +214,30 @@ func (e *Episode) GUID() string {
 // ParentGUID is a convenience method to access the resources parent guid
 func (e *Episode) Parent() string {
 	return e.Metadata.Parent
+}
+
+// EpisodeAsInt is a convenience method to access the resources episode
+func (e *Episode) EpisodeAsInt() int {
+	if e.Metadata.Labels[LabelEpisode] == "" {
+		return -1
+	}
+	i, err := strconv.Atoi(e.Metadata.Labels[LabelEpisode])
+	if err != nil {
+		return -1
+	}
+	return i
+}
+
+// SeasonAsInt is a convenience method to access the resources season
+func (e *Episode) SeasonAsInt() int {
+	if e.Metadata.Labels[LabelSeason] == "" {
+		return -1
+	}
+	i, err := strconv.Atoi(e.Metadata.Labels[LabelSeason])
+	if err != nil {
+		return -1
+	}
+	return i
 }
 
 // sort an EpisodeList
