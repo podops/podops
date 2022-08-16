@@ -3,14 +3,12 @@ package importer
 import (
 	"context"
 	"fmt"
-	"os"
 	"sort"
 	"strings"
 	"time"
 
 	"github.com/mmcdole/gofeed"
 	"github.com/txsvc/stdlib/v2/id"
-	"gopkg.in/yaml.v3"
 
 	"github.com/podops/podops"
 	"github.com/podops/podops/config"
@@ -18,26 +16,11 @@ import (
 )
 
 const (
-	parseRssTimeout = 60 * time.Second
+	parseRSSTimeout = 60 * time.Second
 )
 
-func dumpResource(path string, doc interface{}, dump bool) error {
-	data, err := yaml.Marshal(doc)
-	if err != nil {
-		return err
-	}
-
-	os.WriteFile(path, data, 0644)
-
-	if dump {
-		fmt.Printf("\n---\n# %s\n%s\n", path, string(data))
-	}
-
-	return nil
-}
-
 func ImportPodcastFeed(feedUrl string) (*podops.Show, error) {
-	ctx, cancel := context.WithTimeout(context.Background(), parseRssTimeout)
+	ctx, cancel := context.WithTimeout(context.Background(), parseRSSTimeout)
 	defer cancel()
 
 	fp := gofeed.NewParser()
@@ -47,12 +30,6 @@ func ImportPodcastFeed(feedUrl string) (*podops.Show, error) {
 	if err != nil {
 		return nil, err
 	}
-
-	// hack
-	srcPath := fmt.Sprintf("../../hack/import/%s_src.yaml", id.Fingerprint(feed.Title))
-	targetPath := fmt.Sprintf("../../hack/import/%s.yaml", id.Fingerprint(feed.Title))
-	dumpResource(srcPath, feed, false)
-	// end hack
 
 	// import the description of the show
 	show := importShow(feed)
@@ -86,10 +63,6 @@ func ImportPodcastFeed(feedUrl string) (*podops.Show, error) {
 	if show.PublishDateTimestamp() < show.Episodes[0].PublishDateTimestamp() {
 		show.Metadata.Date = show.Episodes[0].Metadata.Date
 	}
-
-	// hack
-	dumpResource(targetPath, show, true)
-	// end hack
 
 	return &show, nil
 }

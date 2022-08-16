@@ -99,6 +99,14 @@ func setupCommands() []*cli.Command {
 			Action:    cmd.NewCommand,
 		},
 		{
+			Name:      "import",
+			Usage:     "Import a podcast from its RSS feed",
+			UsageText: "import [feed]",
+			Category:  contentCommandsGroup,
+			Action:    cmd.ImportCommand,
+			Flags:     importFlags(),
+		},
+		{
 			Name:      "template",
 			Usage:     "Create resource templates with default example values",
 			UsageText: "template show|episode [NAME]",
@@ -133,6 +141,26 @@ func globalFlags() []cli.Flag {
 			Usage:       "Directory for the configuration and keystore",
 			DefaultText: "$HOME/.podops",
 			Aliases:     []string{"c"},
+		},
+	}
+	return f
+}
+
+func importFlags() []cli.Flag {
+	f := []cli.Flag{
+		&cli.StringFlag{
+			Name:        "output",
+			Usage:       "The output location",
+			DefaultText: ".",
+			Aliases:     []string{"o"},
+		},
+		&cli.BoolFlag{
+			Name:  "rewrite",
+			Usage: "Rewrite asset references during the import",
+		},
+		&cli.BoolFlag{
+			Name:  "single-file",
+			Usage: "Write all resources as one file",
 		},
 	}
 	return f
@@ -197,9 +225,7 @@ func syncFlags() []cli.Flag {
 	return f
 }
 
-//
 // all the help texts used in the CLI
-//
 const (
 	globalHelpText = `PodOps: Podcast Operations Client
 
