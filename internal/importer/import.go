@@ -63,6 +63,9 @@ func ImportPodcastFeed(feedUrl string) (*podops.Show, error) {
 			show.Episodes[i] = importEpisode(item)
 		}
 	*/
+
+	// FIXME: sort episodes, assign numbers if not present, patch show.metadata.date if inconsistent
+
 	// hack
 	dumpResource(targetPath, show, true)
 	// end hack
@@ -107,6 +110,12 @@ func importShowMetadata(feed *gofeed.Feed) podops.Metadata {
 
 	m.Labels[podops.LabelLanguage] = stringWithDefault(feed.Language, "en")
 
+	if feed.Published != "" {
+		m.Date = feed.Published
+	} else if feed.Updated != "" {
+		m.Date = feed.Updated
+	}
+
 	if feed.ITunesExt != nil {
 		if feed.ITunesExt.Keywords != "" {
 			m.Tags = feed.ITunesExt.Keywords
@@ -138,14 +147,44 @@ func importShowDescription(feed *gofeed.Feed) podops.ShowDescription {
 	return sd
 }
 
-// FIXME this is just a simple implementation, not considering the iTunes categories
 func importCategory(feed *gofeed.Feed) []podops.Category {
-	cat := make([]podops.Category, len(feed.Categories))
-	for i, c := range feed.Categories {
-		cat[i] = podops.Category{Name: c}
+	var cc *podops.Category                 // current category
+	cm := make(map[string]*podops.Category) // category map
+	ca := make([]*podops.Category, 0)       // category array
+
+	for _, c := range feed.Categories {
+		lc, found := cm[c]
+		if found {
+			cc = lc
+		} else {
+			if strings.HasPrefix(c, " ") {
+				// found a subcategory
+				if len(cc.SubCategory) == 0 {
+					cc.SubCategory = make([]string, 1)
+					cc.SubCategory[0] = strings.Trim(c, " ")
+				} else {
+					cc.SubCategory = append(cc.SubCategory, strings.Trim(c, " "))
+				}
+			} else {
+				// new category, add to map and array
+				cc = &podops.Category{
+					Name: c,
+				}
+				ca = append(ca, cc) // append to array
+				cm[c] = cc
+			}
+		}
 	}
 
-	return cat
+	// copy from *structs to structs
+	categories := make([]podops.Category, len(ca))
+	for i, cc := range ca {
+		categories[i] = podops.Category{
+			Name:        cc.Name,
+			SubCategory: cc.SubCategory,
+		}
+	}
+	return categories
 }
 
 func importOwner(feed *gofeed.Feed) podops.Owner {
