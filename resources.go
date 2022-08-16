@@ -100,8 +100,10 @@ type (
 		Kind        string          `json:"kind" yaml:"kind" binding:"required"`               // REQUIRED default: show
 		Metadata    Metadata        `json:"metadata" yaml:"metadata" binding:"required"`       // REQUIRED
 		Description ShowDescription `json:"description" yaml:"description" binding:"required"` // REQUIRED
-		Image       AssetRef        `json:"image" yaml:"image" binding:"required"`             // REQUIRED 'channel.itunes.image'
-		Episodes    EpisodeList     `json:"episodes,omitempty" yaml:"episodes,omitempty"`      // OPTIONAL used only to import a feed
+		Image       AssetRef        `json:"image" yaml:"image" binding:"required"`
+		FeedLink    *AssetRef       `json:"feedLink,omitempty" yaml:"feedLink,omitempty"`       // OPTIONAL only used in imports
+		NewFeedLink *AssetRef       `json:"newFeedLink,omitempty" yaml:"newFeedLink,omitempty"` // OPTIONAL channel.itunes.new-feed-url -> move to label             // REQUIRED 'channel.itunes.image'
+		Episodes    EpisodeList     `json:"episodes,omitempty" yaml:"episodes,omitempty"`       // OPTIONAL used only to import a feed
 	}
 
 	// Episode holds all metadata related to a podcast episode
@@ -126,7 +128,6 @@ type (
 		Owner     Owner      `json:"owner" yaml:"owner"`                             // RECOMMENDED 'channel.itunes.owner'
 		Author    string     `json:"author" yaml:"author"`                           // RECOMMENDED 'channel.itunes.author'
 		Copyright string     `json:"copyright,omitempty" yaml:"copyright,omitempty"` // OPTIONAL 'channel.copyright'
-		NewFeed   *AssetRef  `json:"newFeed,omitempty" yaml:"newFeed,omitempty"`     // OPTIONAL channel.itunes.new-feed-url -> move to label
 	}
 
 	// EpisodeDescription holds essential episode metadata
@@ -213,44 +214,6 @@ func (r *AssetRef) LocalNamePart() string {
 	return parts[len(parts)-1:][0]
 }
 
-// DefaultShowMetadata creates a default set of labels etc for a Show resource
-//
-//	language:	<ISO639 two-letter-code> REQUIRED 'channel.language'
-//	explicit:	True | False REQUIRED 'channel.itunes.explicit'
-//	type:		Episodic | Serial REQUIRED 'channel. itunes.type'
-//	block:		Yes OPTIONAL 'channel.itunes.block' Anything else than 'Yes' has no effect
-//	complete:	Yes OPTIONAL 'channel.itunes.complete' Anything else than 'Yes' has no effect
-func DefaultShowMetadata() map[string]string {
-	l := make(map[string]string)
-
-	l[LabelLanguage] = "en_US"
-	l[LabelExplicit] = "no"
-	l[LabelType] = ShowTypeEpisodic
-	l[LabelBlock] = "no"
-	l[LabelComplete] = "no"
-
-	return l
-}
-
-// DefaultEpisodeMetadata creates a default set of labels etc for a Episode resource
-//
-//	season: 	<season number> OPTIONAL 'item.itunes.season'
-//	episode:	<episode number> REQUIRED 'item.itunes.episode'
-//	explicit:	True | False REQUIRED 'channel.itunes.explicit'
-//	type:		Full | Trailer | Bonus REQUIRED 'item.itunes.episodeType'
-//	block:		Yes OPTIONAL 'item.itunes.block' Anything else than 'Yes' has no effect
-func DefaultEpisodeMetadata() map[string]string {
-	l := make(map[string]string)
-
-	l[LabelSeason] = "1"
-	l[LabelEpisode] = "1"
-	l[LabelExplicit] = "no"
-	l[LabelType] = EpisodeTypeFull
-	l[LabelBlock] = "no"
-
-	return l
-}
-
 // DefaultShow creates a default show struc
 func DefaultShow(name, title, summary, guid, portal, cdn string) *Show {
 	return &Show{
@@ -322,4 +285,42 @@ func DefaultEpisode(name, parentName, guid, parent, portal, cdn string) *Episode
 			Rel:  ResourceTypeLocal,
 		},
 	}
+}
+
+// DefaultShowMetadata creates a default set of labels etc for a Show resource
+//
+//	language:	<ISO639 two-letter-code> REQUIRED 'channel.language'
+//	explicit:	True | False REQUIRED 'channel.itunes.explicit'
+//	type:		Episodic | Serial REQUIRED 'channel. itunes.type'
+//	block:		Yes OPTIONAL 'channel.itunes.block' Anything else than 'Yes' has no effect
+//	complete:	Yes OPTIONAL 'channel.itunes.complete' Anything else than 'Yes' has no effect
+func DefaultShowMetadata() map[string]string {
+	l := make(map[string]string)
+
+	l[LabelLanguage] = "en_US"
+	l[LabelExplicit] = "False"
+	l[LabelType] = ShowTypeEpisodic
+	l[LabelBlock] = "No"
+	l[LabelComplete] = "No"
+
+	return l
+}
+
+// DefaultEpisodeMetadata creates a default set of labels etc for a Episode resource
+//
+//	season: 	<season number> OPTIONAL 'item.itunes.season'
+//	episode:	<episode number> REQUIRED 'item.itunes.episode'
+//	explicit:	True | False REQUIRED 'channel.itunes.explicit'
+//	type:		Full | Trailer | Bonus REQUIRED 'item.itunes.episodeType'
+//	block:		Yes OPTIONAL 'item.itunes.block' Anything else than 'Yes' has no effect
+func DefaultEpisodeMetadata() map[string]string {
+	l := make(map[string]string)
+
+	l[LabelSeason] = "1"
+	l[LabelEpisode] = "1"
+	l[LabelExplicit] = "False"
+	l[LabelType] = EpisodeTypeFull
+	l[LabelBlock] = "No"
+
+	return l
 }

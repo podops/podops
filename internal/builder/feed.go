@@ -41,8 +41,8 @@ func transformToPodcast(s *podops.Show) (*rss.Channel, error) {
 		Email: s.Description.Owner.Email,
 	}
 	pf.Copyright = s.Description.Copyright
-	if s.Description.NewFeed != nil {
-		pf.INewFeedURL = s.Description.NewFeed.URI
+	if s.NewFeedLink != nil {
+		pf.INewFeedURL = s.NewFeedLink.URI
 	}
 	pf.Language = s.Metadata.Labels[podops.LabelLanguage]
 	pf.IExplicit = s.Metadata.Labels[podops.LabelExplicit]

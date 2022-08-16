@@ -29,3 +29,14 @@ func stringWithDefault(s, def string) string {
 	}
 	return strings.Trim(s, " ")
 }
+
+// stringExpect compares s and exp, all case insensitive. If a match, exp is returned, def otherwise.
+func stringExpect(s, exp, def string) string {
+	if s == "" {
+		return def
+	}
+	if strings.EqualFold(s, exp) {
+		return exp
+	}
+	return def
+}

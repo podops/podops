@@ -22,6 +22,14 @@ var (
 		"https://feeds.blubrry.com/feeds/microsoftresearch.xml",
 		"https://deloitteus.libsyn.com/rss",
 		"https://feeds.feedburner.com/TedInterview",
+
+		"http://feeds.hoaxilla.com/hoaxilla",
+		"https://resonator-podcast.de/?feed=m4a",
+		"http://chaosradio.ccc.de/chaosradio-latest.rss",
+		"http://alternativlos.org/alternativlos.rss",
+		"https://feeds.metaebene.me/nsfw/m4a",
+		"https://ukw.fm/feed/mp3/",
+		"https://feeds.metaebene.me/forschergeist/m4a",
 	}
 )
 
