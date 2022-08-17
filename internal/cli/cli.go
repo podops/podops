@@ -2,7 +2,6 @@ package cli
 
 import (
 	"fmt"
-	"io/ioutil"
 	"os"
 	"strings"
 
@@ -69,7 +68,7 @@ func dumpResource(path string, doc interface{}) error {
 		return err
 	}
 
-	ioutil.WriteFile(path, data, 0644)
+	os.WriteFile(path, data, 0644)
 	fmt.Printf("\n---\n# %s\n%s\n", path, string(data))
 
 	return nil

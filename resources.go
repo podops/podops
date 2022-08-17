@@ -2,10 +2,11 @@ package podops
 
 import (
 	"fmt"
+	"strconv"
 	"strings"
 	"time"
 
-	"github.com/podops/podops/config"
+	"github.com/txsvc/stdlib/v2/id"
 )
 
 const (
@@ -100,7 +101,10 @@ type (
 		Kind        string          `json:"kind" yaml:"kind" binding:"required"`               // REQUIRED default: show
 		Metadata    Metadata        `json:"metadata" yaml:"metadata" binding:"required"`       // REQUIRED
 		Description ShowDescription `json:"description" yaml:"description" binding:"required"` // REQUIRED
-		Image       AssetRef        `json:"image" yaml:"image" binding:"required"`             // REQUIRED 'channel.itunes.image'
+		Image       AssetRef        `json:"image" yaml:"image" binding:"required"`
+		FeedLink    *AssetRef       `json:"feedLink,omitempty" yaml:"feedLink,omitempty"`       // OPTIONAL only used in imports
+		NewFeedLink *AssetRef       `json:"newFeedLink,omitempty" yaml:"newFeedLink,omitempty"` // OPTIONAL channel.itunes.new-feed-url -> move to label             // REQUIRED 'channel.itunes.image'
+		Episodes    EpisodeList     `json:"episodes,omitempty" yaml:"episodes,omitempty"`       // OPTIONAL used only to import a feed
 	}
 
 	// Episode holds all metadata related to a podcast episode
@@ -113,6 +117,9 @@ type (
 		Enclosure   AssetRef           `json:"enclosure" yaml:"enclosure" binding:"required"`     // REQUIRED
 	}
 
+	// EpisodeList holds the list of valid episodes that can be added to a podcast
+	EpisodeList []*Episode
+
 	// ShowDescription holds essential show metadata
 	ShowDescription struct {
 		Title     string     `json:"title" yaml:"title" binding:"required"`          // REQUIRED 'channel.title' 'channel.itunes.title'
@@ -122,7 +129,6 @@ type (
 		Owner     Owner      `json:"owner" yaml:"owner"`                             // RECOMMENDED 'channel.itunes.owner'
 		Author    string     `json:"author" yaml:"author"`                           // RECOMMENDED 'channel.itunes.author'
 		Copyright string     `json:"copyright,omitempty" yaml:"copyright,omitempty"` // OPTIONAL 'channel.copyright'
-		NewFeed   *AssetRef  `json:"newFeed,omitempty" yaml:"newFeed,omitempty"`     // OPTIONAL channel.itunes.new-feed-url -> move to label
 	}
 
 	// EpisodeDescription holds essential episode metadata
@@ -168,6 +174,20 @@ func (s *Show) GUID() string {
 }
 
 // PublishDateTimestamp converts a RFC1123Z formatted timestamp into UNIX timestamp
+func (s *Show) PublishDateTimestamp() int64 {
+	pd := s.Metadata.Date
+	if pd == "" {
+		return 0
+	}
+	t, err := time.Parse(time.RFC1123Z, pd)
+	if err != nil {
+		return 0
+	}
+
+	return t.Unix()
+}
+
+// PublishDateTimestamp converts a RFC1123Z formatted timestamp into UNIX timestamp
 func (e *Episode) PublishDateTimestamp() int64 {
 	pd := e.Metadata.Date
 	if pd == "" {
@@ -196,118 +216,77 @@ func (e *Episode) Parent() string {
 	return e.Metadata.Parent
 }
 
+// EpisodeAsInt is a convenience method to access the resources episode
+func (e *Episode) EpisodeAsInt() int {
+	if e.Metadata.Labels[LabelEpisode] == "" {
+		return -1
+	}
+	i, err := strconv.Atoi(e.Metadata.Labels[LabelEpisode])
+	if err != nil {
+		return -1
+	}
+	return i
+}
+
+// SeasonAsInt is a convenience method to access the resources season
+func (e *Episode) SeasonAsInt() int {
+	if e.Metadata.Labels[LabelSeason] == "" {
+		return -1
+	}
+	i, err := strconv.Atoi(e.Metadata.Labels[LabelSeason])
+	if err != nil {
+		return -1
+	}
+	return i
+}
+
+// sort an EpisodeList
+func (e EpisodeList) Len() int      { return len(e) }
+func (e EpisodeList) Swap(i, j int) { e[i], e[j] = e[j], e[i] }
+func (e EpisodeList) Less(i, j int) bool {
+	return e[i].PublishDateTimestamp() > e[j].PublishDateTimestamp() // sorting direction is descending
+}
+
+// AssetReference creates a unique asset reference based on the
+// assets parent GUID and its URI. The reference is a CRC32 checksum
+// and assumed to be static once the asset has been created.
+// The media file the asset refers to might change over time.
+func (r *AssetRef) AssetReference(parent string) string {
+	return id.Checksum(parent + r.URI)
+}
+
+// MediaReference creates reference to a media file based on its current ETag.
+// The MediaReference can change over time as the referenced file changes.
+func (r *AssetRef) MediaReference() string {
+	parts := strings.Split(r.URI, ".")
+	if len(parts) == 0 {
+		return r.ETag
+	}
+	return fmt.Sprintf("%s.%s", r.ETag, parts[len(parts)-1])
+}
+
+// CanonicalReference creates the full URI for the asset, as it can be found in the CDN
+func (r *AssetRef) CanonicalReference(cdn, parent string, rewrite bool) string {
+	if r.Rel == ResourceTypeExternal && !rewrite {
+		return r.URI
+	}
+	return fmt.Sprintf("%s/%s/%s", cdn, parent, r.MediaReference())
+}
+
 // LocalNamePart returns the part after the last /, if any
 func (r *AssetRef) LocalNamePart() string {
 	parts := strings.Split(r.URI, "/")
 	return parts[len(parts)-1:][0]
 }
 
-// DefaultShowMetadata creates a default set of labels etc for a Show resource
-//
-//	language:	<ISO639 two-letter-code> REQUIRED 'channel.language'
-//	explicit:	True | False REQUIRED 'channel.itunes.explicit'
-//	type:		Episodic | Serial REQUIRED 'channel. itunes.type'
-//	block:		Yes OPTIONAL 'channel.itunes.block' Anything else than 'Yes' has no effect
-//	complete:	Yes OPTIONAL 'channel.itunes.complete' Anything else than 'Yes' has no effect
-func DefaultShowMetadata() map[string]string {
-	l := make(map[string]string)
-
-	l[LabelLanguage] = "en_US"
-	l[LabelExplicit] = "no"
-	l[LabelType] = ShowTypeEpisodic
-	l[LabelBlock] = "no"
-	l[LabelComplete] = "no"
-
-	return l
-}
-
-// DefaultEpisodeMetadata creates a default set of labels etc for a Episode resource
-//	season: 	<season number> OPTIONAL 'item.itunes.season'
-//	episode:	<episode number> REQUIRED 'item.itunes.episode'
-//	explicit:	True | False REQUIRED 'channel.itunes.explicit'
-//	type:		Full | Trailer | Bonus REQUIRED 'item.itunes.episodeType'
-//	block:		Yes OPTIONAL 'item.itunes.block' Anything else than 'Yes' has no effect
-func DefaultEpisodeMetadata() map[string]string {
-	l := make(map[string]string)
-
-	l[LabelSeason] = "1"
-	l[LabelEpisode] = "1"
-	l[LabelExplicit] = "no"
-	l[LabelType] = EpisodeTypeFull
-	l[LabelBlock] = "no"
-
-	return l
-}
-
-// DefaultShow creates a default show struc
-func DefaultShow(name, title, summary, guid, portal, cdn string) *Show {
-	return &Show{
-		APIVersion: config.Version,
-		Kind:       ResourceShow,
-		Metadata: Metadata{
-			Name:   name,
-			GUID:   guid,
-			Date:   time.Now().UTC().Format(time.RFC1123Z),
-			Labels: DefaultShowMetadata(),
-		},
-		Description: ShowDescription{
-			Title:   title,
-			Summary: summary,
-			Link: AssetRef{
-				URI: fmt.Sprintf("%s/%s", portal, name),
-				Rel: ResourceTypeExternal,
-			},
-			Category: []Category{
-				{
-					Name: "Technology",
-					SubCategory: []string{
-						"Podcasting",
-					},
-				}},
-			Owner: Owner{
-				Name:  "PODCAST OWNER(S)",
-				Email: "HELLO@PODCAST",
-			},
-			Author:    "PODCAST AUTHOR(S)",
-			Copyright: "PODCAST COPYRIGHT",
-		},
-		Image: AssetRef{
-			URI: "cover.png",
-			Rel: ResourceTypeLocal,
-		},
-	}
-}
-
-// DefaultEpisode creates a default episode struc
-func DefaultEpisode(name, parentName, guid, parent, portal, cdn string) *Episode {
-	return &Episode{
-		APIVersion: config.Version,
-		Kind:       ResourceEpisode,
-		Metadata: Metadata{
-			Name:   name,
-			GUID:   guid,
-			Parent: parent,
-			Date:   time.Now().UTC().Format(time.RFC1123Z),
-			Labels: DefaultEpisodeMetadata(),
-		},
-		Description: EpisodeDescription{
-			Title:       "EPISODE TITLE",
-			Summary:     "EPISODE SUMMARY",
-			EpisodeText: "EPISODE DESCRIPTION",
-			Link: AssetRef{
-				URI: fmt.Sprintf("%s/%s/%s", portal, parentName, name),
-				Rel: ResourceTypeExternal,
-			},
-			Duration: 1, // Seconds. Must not be 0, otherwise a validation error occurs.
-		},
-		Image: AssetRef{
-			URI: "episode.png",
-			Rel: ResourceTypeLocal,
-		},
-		Enclosure: AssetRef{
-			URI:  "episode.mp3",
-			Type: "audio/mpeg",
-			Rel:  ResourceTypeLocal,
-		},
+func (r *AssetRef) Clone() AssetRef {
+	return AssetRef{
+		URI:       r.URI,
+		Rel:       r.Rel,
+		Type:      r.Type,
+		ETag:      r.ETag,
+		Duration:  r.Duration,
+		Timestamp: r.Timestamp,
+		Size:      r.Size,
 	}
 }

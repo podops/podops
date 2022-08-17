@@ -15,7 +15,6 @@ import (
 	"github.com/podops/podops/auth"
 	"github.com/podops/podops/client"
 	"github.com/podops/podops/config"
-	"github.com/podops/podops/feed"
 	"github.com/podops/podops/internal"
 	"github.com/podops/podops/internal/loader"
 )
@@ -96,7 +95,7 @@ func ConfigCommand(c *cli.Context) error {
 
 func register(userID, root string) error {
 	// try to read the parent GUID from the show.yaml
-	showPath := filepath.Join(root, feed.DefaultShowName)
+	showPath := filepath.Join(root, config.DefaultShowName)
 
 	_, kind, parent, err := loader.ReadResource(context.TODO(), showPath)
 	if err != nil {

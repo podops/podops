@@ -18,7 +18,6 @@ import (
 
 	"github.com/podops/podops/auth"
 	"github.com/podops/podops/config"
-	"github.com/podops/podops/feed"
 	"github.com/podops/podops/internal/metadata"
 )
 
@@ -67,7 +66,7 @@ func CreateInventoryMappings(ctx context.Context, root string) error {
 	err := filepath.Walk(root, func(path string, info os.FileInfo, err error) error {
 
 		name := filepath.Base(path)
-		if name == feed.DefaultFeedName {
+		if name == config.DefaultFeedName {
 			parts := strings.Split(path, "/")
 			parent := parts[len(parts)-2]
 

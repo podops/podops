@@ -16,8 +16,10 @@ test_build:
 test:
 	go test
 	cd internal && go test
-	cd internal/cdn && go test
+	cd internal/builder && go test
 	cd internal/metadata && go test
+	cd internal/importer && go test
+	cd internal/cdn && go test
 	cd auth && go test
 	cd client && go test
 	cd config && go test

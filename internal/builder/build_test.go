@@ -1,4 +1,4 @@
-package feed
+package builder
 
 import (
 	"context"
@@ -9,12 +9,12 @@ import (
 )
 
 const (
-	rootDir = "../example/"
+	rootDir = "../../example/"
 )
 
 func TestBuildOnly(t *testing.T) {
 
-	name, err := Build(context.TODO(), rootDir, false, true, true)
+	name, err := Build(context.TODO(), rootDir, false, false, true, false, true)
 	if err != nil {
 		fmt.Println(err)
 	}
@@ -25,7 +25,7 @@ func TestBuildOnly(t *testing.T) {
 
 func TestAssembleAfterBuildOnly(t *testing.T) {
 
-	err := Assemble(context.TODO(), rootDir, false)
+	err := Assemble(context.TODO(), rootDir, false, false, false)
 	if err != nil {
 		fmt.Println(err)
 	}
@@ -35,7 +35,7 @@ func TestAssembleAfterBuildOnly(t *testing.T) {
 
 func TestBuildAndAssemble(t *testing.T) {
 
-	name, err := Build(context.TODO(), rootDir, false, false, true)
+	name, err := Build(context.TODO(), rootDir, false, false, false, false, true)
 	if err != nil {
 		fmt.Println(err)
 	}

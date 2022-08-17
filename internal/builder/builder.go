@@ -1,9 +1,8 @@
-package feed
+package builder
 
 import (
 	"context"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"sort"
@@ -18,25 +17,9 @@ import (
 	"github.com/podops/podops/internal/rss"
 )
 
-const (
-	DefaultFeedName = "feed.xml"
-	DefaultShowName = "show.yaml"
-)
-
 var (
 	mediaTypeMap map[string]rss.EnclosureType
 )
-
-type (
-	// EpisodeList holds the list of valid episodes that will be added to a podcast
-	EpisodeList []*podops.Episode
-)
-
-func (e EpisodeList) Len() int      { return len(e) }
-func (e EpisodeList) Swap(i, j int) { e[i], e[j] = e[j], e[i] }
-func (e EpisodeList) Less(i, j int) bool {
-	return e[i].PublishDateTimestamp() > e[j].PublishDateTimestamp() // sorting direction is descending
-}
 
 func init() {
 	mediaTypeMap = make(map[string]rss.EnclosureType)
@@ -50,8 +33,9 @@ func init() {
 }
 
 // Build gathers all podcast resources and builds the feed.xml
-func Build(ctx context.Context, root string, validateOnly, buildOnly, purge bool) (string, error) {
-	var episodes EpisodeList
+func Build(ctx context.Context, root string, skipValidate, skipBuild, skipAssemble, forceAssemble, purge bool) (string, error) {
+	var v *validate.Validator
+	var episodes podops.EpisodeList
 	episodeLookup := make(map[string]*podops.Episode)
 	episodePath := make(map[string]string)
 
@@ -68,7 +52,7 @@ func Build(ctx context.Context, root string, validateOnly, buildOnly, purge bool
 	}
 
 	// find and load the show.yaml
-	showPath := filepath.Join(root, DefaultShowName)
+	showPath := filepath.Join(root, config.DefaultShowName)
 	rsrc, kind, parentGUID, err := loader.ReadResource(ctx, showPath)
 	if err != nil {
 		return "", err
@@ -80,17 +64,21 @@ func Build(ctx context.Context, root string, validateOnly, buildOnly, purge bool
 	// convert and validate show.yaml
 	show := rsrc.(*podops.Show)
 
-	// validate the show
-	v := show.Validate("show."+parentGUID, validate.NewValidator())
-	if v.Errors != 0 {
-		return show.Metadata.Name, v.AsError()
+	if !skipValidate {
+		// validate the show
+		v = show.Validate("show."+parentGUID, validate.NewValidator())
+		if v.Errors != 0 {
+			return show.Metadata.Name, v.AsError()
+		}
 	}
-	// validate show assets
-	if err = ValidateResource(ctx, parentGUID, root, &show.Image); err != nil {
-		return show.Metadata.Name, err
-	}
-	if !buildOnly {
-		if err := ResolveResource(ctx, parentGUID, root, false, &show.Image); err != nil {
+
+	if !skipAssemble {
+		// validate show assets
+		if err = ValidateResource(ctx, parentGUID, root, &show.Image); err != nil {
+			return show.Metadata.Name, err
+		}
+
+		if err := ResolveResource(ctx, parentGUID, root, forceAssemble, false, &show.Image); err != nil {
 			return show.Metadata.Name, err
 		}
 	}
@@ -114,25 +102,32 @@ func Build(ctx context.Context, root string, validateOnly, buildOnly, purge bool
 			if kind == podops.ResourceEpisode {
 				episode := rsrc.(*podops.Episode)
 				if episode.PublishDateTimestamp() < now { // episodes with a FUTURE timestamp are valid but will be excluded
-					v = episode.Validate("episode."+episode.GUID(), v)
 
-					// FIXME filter for other flags, e.g. Block = true
-
-					if v.Errors == 0 {
-						// FIXME more validations
+					if !skipValidate {
+						v = episode.Validate("episode."+episode.GUID(), v)
 
 						// check mismatch episode.parent & show.guid
 						if episode.Metadata.Parent != "" && episode.Metadata.Parent != show.Metadata.GUID {
 							v.AddError(fmt.Sprintf(podops.MsgResourceInvalidReference, episode.Metadata.Parent))
 						}
-
-						// add to lookup structure
-						episodePath[episode.Metadata.GUID] = base
-						episodeLookup[episode.Metadata.GUID] = episode
-
-						// add to list of episodes
-						episodes = append(episodes, episode)
 					}
+					if !skipAssemble {
+						if err := ValidateResource(ctx, parentGUID, root, &episode.Image); err != nil {
+							return err
+						}
+						if err = ValidateResource(ctx, parentGUID, root, &episode.Enclosure); err != nil {
+							return err
+						}
+					}
+
+					// FIXME filter for other flags, e.g. Block = true
+
+					// add to lookup structure
+					episodePath[episode.Metadata.GUID] = base
+					episodeLookup[episode.Metadata.GUID] = episode
+
+					// add to list of episodes
+					episodes = append(episodes, episode)
 				}
 			}
 		}
@@ -144,9 +139,13 @@ func Build(ctx context.Context, root string, validateOnly, buildOnly, purge bool
 	if err != nil {
 		return show.Metadata.Name, err
 	}
-	if v.Errors != 0 {
-		return show.Metadata.Name, v.AsError()
+
+	if !skipValidate {
+		if v.Errors != 0 {
+			return show.Metadata.Name, v.AsError()
+		}
 	}
+
 	if len(episodes) == 0 {
 		return show.Metadata.Name, podops.ErrBuildNoEpisodes
 	}
@@ -155,7 +154,7 @@ func Build(ctx context.Context, root string, validateOnly, buildOnly, purge bool
 	sort.Sort(episodes)
 
 	// assemble the feed
-	feed, err := transformToPodcast(show)
+	feed, err := transformToPodcast(show, forceAssemble)
 	if err != nil {
 		return show.Metadata.Name, err
 	}
@@ -164,49 +163,39 @@ func Build(ctx context.Context, root string, validateOnly, buildOnly, purge bool
 
 	// add all published episodes
 	for _, e := range episodes {
-		if err = ValidateResource(ctx, parentGUID, root, &e.Image); err != nil {
-			return show.Metadata.Name, err
-		}
-		if !buildOnly {
-			if err := ResolveResource(ctx, parentGUID, root, false, &e.Image); err != nil {
+
+		if !skipAssemble {
+			if err := ResolveResource(ctx, parentGUID, root, forceAssemble, false, &e.Image); err != nil {
+				return show.Metadata.Name, err
+			}
+
+			if err := ResolveResource(ctx, parentGUID, root, forceAssemble, false, &e.Enclosure); err != nil {
 				return show.Metadata.Name, err
 			}
 		}
 
-		if err = ValidateResource(ctx, parentGUID, root, &e.Enclosure); err != nil {
-			return show.Metadata.Name, err
-		}
-		if !buildOnly {
-			if err := ResolveResource(ctx, parentGUID, root, false, &e.Enclosure); err != nil {
-				return show.Metadata.Name, err
-			}
-		}
-
-		item, err := transformToItem(e)
+		item, err := transformToItem(e, forceAssemble)
 		if err != nil {
 			return show.Metadata.Name, err
 		}
 		feed.AddItem(item)
 	}
 
-	if validateOnly {
+	if skipBuild {
 		return show.Metadata.Name, nil
 	}
 
 	// write the feed.xml
-	feedPath := filepath.Join(root, config.BuildLocation, DefaultFeedName)
-	return show.Metadata.Name, ioutil.WriteFile(feedPath, feed.Bytes(), 0644)
-
+	feedPath := filepath.Join(root, config.BuildLocation, config.DefaultFeedName)
+	return show.Metadata.Name, os.WriteFile(feedPath, feed.Bytes(), 0644)
 }
 
 // Assemble collects all referenced podcast resources (.mp3, .gif, .png etc)
 // and puts them into the local build location.
-func Assemble(ctx context.Context, root string, force bool) error {
-
-	// FIXME flag purge does nothing
+func Assemble(ctx context.Context, root string, force, overwrite, purge bool) error {
 
 	// find and load the show.yaml
-	showPath := filepath.Join(root, DefaultShowName)
+	showPath := filepath.Join(root, config.DefaultShowName)
 	_, kind, parent, err := loader.ReadResource(ctx, showPath)
 	if err != nil {
 		return err
@@ -217,8 +206,18 @@ func Assemble(ctx context.Context, root string, force bool) error {
 
 	// cache dir
 	assetPath := filepath.Join(root, config.BuildLocation)
+
+	// FIXME only delete media assets, keep the *.yaml files !
+	//if purge {
+	//	os.RemoveAll(assetPath)
+	//}
+
+	// create cache dir if needed
 	if _, err := os.Stat(assetPath); os.IsNotExist(err) {
-		return podops.ErrAssembleNoResources
+		err = os.Mkdir(assetPath, os.ModePerm)
+		if err != nil {
+			return err
+		}
 	}
 
 	err = filepath.Walk(assetPath, func(path string, info os.FileInfo, err error) error {
@@ -229,7 +228,7 @@ func Assemble(ctx context.Context, root string, force bool) error {
 			if err != nil {
 				return err
 			}
-			return ResolveResource(ctx, parent, root, force, encl)
+			return ResolveResource(ctx, parent, root, force, overwrite, encl)
 		}
 
 		// ignore all other extensions

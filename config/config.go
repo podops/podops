@@ -24,6 +24,10 @@ const (
 	ScopeContentEditor = "content:editor"
 	ScopeContentRead   = "content:read"
 	ScopeContentWrite  = "content:write"
+
+	// other constants
+	DefaultFeedName = "feed.xml"
+	DefaultShowName = "show.yaml"
 )
 
 var (

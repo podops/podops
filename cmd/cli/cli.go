@@ -99,6 +99,14 @@ func setupCommands() []*cli.Command {
 			Action:    cmd.NewCommand,
 		},
 		{
+			Name:      "import",
+			Usage:     "Import a podcast from its RSS feed",
+			UsageText: "import [feed]",
+			Category:  contentCommandsGroup,
+			Action:    cmd.ImportCommand,
+			Flags:     importFlags(),
+		},
+		{
 			Name:      "template",
 			Usage:     "Create resource templates with default example values",
 			UsageText: "template show|episode [NAME]",
@@ -138,6 +146,26 @@ func globalFlags() []cli.Flag {
 	return f
 }
 
+func importFlags() []cli.Flag {
+	f := []cli.Flag{
+		&cli.StringFlag{
+			Name:        "output",
+			Usage:       "The output location",
+			DefaultText: ".",
+			Aliases:     []string{"o"},
+		},
+		&cli.BoolFlag{
+			Name:  "rewrite",
+			Usage: "Rewrite asset references during the import",
+		},
+		&cli.BoolFlag{
+			Name:  "single-file",
+			Usage: "Write all resources as one file",
+		},
+	}
+	return f
+}
+
 func templateFlags() []cli.Flag {
 	f := []cli.Flag{
 		&cli.StringFlag{
@@ -157,19 +185,24 @@ func templateFlags() []cli.Flag {
 func buildFlags() []cli.Flag {
 	f := []cli.Flag{
 		&cli.BoolFlag{
-			Name:    "validate",
-			Usage:   "Validate the build only",
-			Aliases: []string{"v"},
+			Name:  "skip-build",
+			Usage: "Validate resources without building the feed",
 		},
 		&cli.BoolFlag{
-			Name:    "purge",
-			Usage:   "Delete all files in the .build folder",
-			Aliases: []string{"p"},
+			Name:  "skip-validation",
+			Usage: "Skip validating resources",
 		},
 		&cli.BoolFlag{
-			Name:    "build-only",
-			Usage:   "Only build the feed without collecting the podcast resources",
-			Aliases: []string{"b"},
+			Name:  "skip-assemble",
+			Usage: "Skip collecting external resources",
+		},
+		&cli.BoolFlag{
+			Name:  "rewrite",
+			Usage: "Force collecting external resources and rewrite for CDN. Has no effect if --skip-assemble=TRUE",
+		},
+		&cli.BoolFlag{
+			Name:  "purge",
+			Usage: "Delete resources in the .build folder",
 		},
 	}
 	return f
@@ -178,9 +211,16 @@ func buildFlags() []cli.Flag {
 func assembleFlags() []cli.Flag {
 	f := []cli.Flag{
 		&cli.BoolFlag{
-			Name:    "force",
-			Usage:   "Force download of podcast resources",
-			Aliases: []string{"f"},
+			Name:  "overwrite",
+			Usage: "Overwrite existing resources",
+		},
+		&cli.BoolFlag{
+			Name:  "force",
+			Usage: "Force collecting external resources",
+		},
+		&cli.BoolFlag{
+			Name:  "purge",
+			Usage: "Delete resources in the .build folder",
 		},
 	}
 	return f
@@ -197,9 +237,7 @@ func syncFlags() []cli.Flag {
 	return f
 }
 
-//
 // all the help texts used in the CLI
-//
 const (
 	globalHelpText = `PodOps: Podcast Operations Client
 

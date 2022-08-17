@@ -33,12 +33,12 @@ func CreateETag(name string, size, timestamp int64) string {
 	return id.Fingerprint(fmt.Sprintf("%s%d%d", name, size, timestamp))
 }
 
-func CreateSimpleID() string {
-	id, _ := id.ShortUUID()
-	return id
-}
-
 func CreateSimpleToken() string {
 	token, _ := id.UUID()
 	return token
+}
+
+// CreateShortGUID returns the first 12 bytes of the strings hash as sudo GUID
+func CreateShortGUID(s string) string {
+	return id.Fingerprint(s)[:12]
 }

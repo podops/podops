@@ -1,8 +1,7 @@
-package feed
+package builder
 
 import (
 	"bytes"
-	"fmt"
 	"time"
 
 	"github.com/yuin/goldmark"
@@ -13,7 +12,7 @@ import (
 )
 
 // transformToPodcast transforms Show metadata into a podcast feed struct
-func transformToPodcast(s *podops.Show) (*rss.Channel, error) {
+func transformToPodcast(s *podops.Show, rewrite bool) (*rss.Channel, error) {
 	now := time.Now()
 
 	// basics
@@ -36,14 +35,14 @@ func transformToPodcast(s *podops.Show) (*rss.Channel, error) {
 		pf.AddCategory(category.Name, category.SubCategory)
 	}
 
-	pf.AddImage(s.Image.CanonicalReference(config.Settings().GetOption(config.PodopsContentEndpointEnv), s.GUID()))
+	pf.AddImage(s.Image.CanonicalReference(config.Settings().GetOption(config.PodopsContentEndpointEnv), s.GUID(), rewrite))
 	pf.IOwner = &rss.Author{
 		Name:  s.Description.Owner.Name,
 		Email: s.Description.Owner.Email,
 	}
 	pf.Copyright = s.Description.Copyright
-	if s.Description.NewFeed != nil {
-		pf.INewFeedURL = s.Description.NewFeed.URI
+	if s.NewFeedLink != nil {
+		pf.INewFeedURL = s.NewFeedLink.URI
 	}
 	pf.Language = s.Metadata.Labels[podops.LabelLanguage]
 	pf.IExplicit = s.Metadata.Labels[podops.LabelExplicit]
@@ -70,7 +69,7 @@ func transformToPodcast(s *podops.Show) (*rss.Channel, error) {
 //	complete:	Yes OPTIONAL 'channel.itunes.complete' Anything else than 'Yes' has no effect
 
 // transformToItem returns the episode struct needed for a podcast feed struct
-func transformToItem(e *podops.Episode) (*rss.Item, error) {
+func transformToItem(e *podops.Episode, rewrite bool) (*rss.Item, error) {
 
 	pubDate, err := time.Parse(time.RFC1123Z, e.Metadata.Date) // FIXME this is redunant
 	if err != nil {
@@ -82,8 +81,8 @@ func transformToItem(e *podops.Episode) (*rss.Item, error) {
 		Description: e.Description.Summary,
 	}
 
-	ef.AddEnclosure(e.Enclosure.CanonicalReference(config.Settings().GetOption(config.PodopsContentEndpointEnv), e.Parent()), mediaTypeMap[e.Enclosure.Type], (int64)(e.Enclosure.Size))
-	ef.AddImage(e.Image.CanonicalReference(config.Settings().GetOption(config.PodopsContentEndpointEnv), e.Parent()))
+	ef.AddEnclosure(e.Enclosure.CanonicalReference(config.Settings().GetOption(config.PodopsContentEndpointEnv), e.Parent(), rewrite), mediaTypeMap[e.Enclosure.Type], (int64)(e.Enclosure.Size))
+	ef.AddImage(e.Image.CanonicalReference(config.Settings().GetOption(config.PodopsContentEndpointEnv), e.Parent(), rewrite))
 	ef.AddPubDate(&pubDate)
 	ef.AddSummary(e.Description.EpisodeText)
 
@@ -93,7 +92,7 @@ func transformToItem(e *podops.Episode) (*rss.Item, error) {
 		ef.AddDuration((int64)(e.Description.Duration))
 	}
 
-	ef.Link = e.Description.Link.CanonicalReference(config.Settings().GetOption(config.PodopsContentEndpointEnv), e.Parent())
+	ef.Link = e.Description.Link.CanonicalReference(config.Settings().GetOption(config.PodopsContentEndpointEnv), e.Parent(), false)
 	ef.ISubtitle = e.Description.Summary
 	ef.GUID = e.Metadata.GUID
 	ef.IExplicit = e.Metadata.Labels[podops.LabelExplicit]
@@ -105,35 +104,6 @@ func transformToItem(e *podops.Episode) (*rss.Item, error) {
 	}
 
 	return ef, nil
-}
-
-// ParseDuration converts seconds duration into HH:MM:SS format
-func ParseDuration(duration int64) string {
-	h := duration / 3600
-	duration = duration % 3600
-
-	m := duration / 60
-	duration = duration % 60
-
-	s := duration
-
-	// HH:MM:SS
-	if h > 9 {
-		return fmt.Sprintf("%02d:%02d:%02d", h, m, s)
-	}
-
-	// H:MM:SS
-	if h > 0 {
-		return fmt.Sprintf("%d:%02d:%02d", h, m, s)
-	}
-
-	// MM:SS
-	if m > 9 {
-		return fmt.Sprintf("%02d:%02d", m, s)
-	}
-
-	// M:SS
-	return fmt.Sprintf("%d:%02d", m, s)
 }
 
 func renderMarkdown(md string) (string, error) {
