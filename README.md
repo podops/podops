@@ -11,16 +11,18 @@ cd /the/podcast/location
 
 # prepare the podcast repo
 po new
-<... do some yaml editing>
+
+# ... do some yaml editing
 
 # create an episode
 po template episode
-<... more yaml editing>
+
+# ... more yaml editing
 
 # build the feed
 po build
 
-# register the podcast with the CDN
+# register the podcast with the CDN at https://cdn.podops.dev
 po init
 
 # sync the podcast with the CDN
@@ -29,7 +31,15 @@ po sync
 
 ### Installation
 
-TBD
+The command line utility `po` can be installed from the source code location:
+
+```shell
+$ git clone https://github.com/podops/podops.git <some_location>
+
+$ cd <some_location>
+
+$ make cli
+```
 
 ### Local development
 
@@ -49,14 +59,14 @@ Run the CLI from local source code:
 
 ```shell
 cd cmd/cli
-go run cli.go <comand>
+go run cli.go <command>
 ```
 
 In order to target a local API service, set the `PODOPS_API_ENDPOINT` environment variable:
 
 ```shell
 cd cmd/cli
-PODOPS_API_ENDPOINT=http://localhost:8080 go run cli.go <comand>
+PODOPS_API_ENDPOINT=http://localhost:8080 go run cli.go <command>
 ```
 
 #### API Service
