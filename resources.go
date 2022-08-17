@@ -1,9 +1,12 @@
 package podops
 
 import (
+	"fmt"
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/txsvc/stdlib/v2/id"
 )
 
 const (
@@ -242,6 +245,32 @@ func (e EpisodeList) Len() int      { return len(e) }
 func (e EpisodeList) Swap(i, j int) { e[i], e[j] = e[j], e[i] }
 func (e EpisodeList) Less(i, j int) bool {
 	return e[i].PublishDateTimestamp() > e[j].PublishDateTimestamp() // sorting direction is descending
+}
+
+// AssetReference creates a unique asset reference based on the
+// assets parent GUID and its URI. The reference is a CRC32 checksum
+// and assumed to be static once the asset has been created.
+// The media file the asset refers to might change over time.
+func (r *AssetRef) AssetReference(parent string) string {
+	return id.Checksum(parent + r.URI)
+}
+
+// MediaReference creates reference to a media file based on its current ETag.
+// The MediaReference can change over time as the referenced file changes.
+func (r *AssetRef) MediaReference() string {
+	parts := strings.Split(r.URI, ".")
+	if len(parts) == 0 {
+		return r.ETag
+	}
+	return fmt.Sprintf("%s.%s", r.ETag, parts[len(parts)-1])
+}
+
+// CanonicalReference creates the full URI for the asset, as it can be found in the CDN
+func (r *AssetRef) CanonicalReference(cdn, parent string, rewrite bool) string {
+	if r.Rel == ResourceTypeExternal && !rewrite {
+		return r.URI
+	}
+	return fmt.Sprintf("%s/%s/%s", cdn, parent, r.MediaReference())
 }
 
 // LocalNamePart returns the part after the last /, if any
