@@ -5,8 +5,9 @@ import (
 
 	"github.com/mmcdole/gofeed"
 	ext "github.com/mmcdole/gofeed/extensions"
+
+	"github.com/podops/podops"
 	"github.com/podops/podops/internal"
-	"github.com/txsvc/stdlib/v2/id"
 )
 
 func convDurationToInt(ite *ext.ITunesItemExtension) int {
@@ -18,9 +19,12 @@ func convDurationToInt(ite *ext.ITunesItemExtension) int {
 
 func itemGUID(item *gofeed.Item) string {
 	if item.GUID != "" {
-		return item.GUID
+		if podops.ValidGUID(item.GUID) {
+			return item.GUID
+		}
+		return internal.CreateShortGUID(item.GUID)
 	}
-	return id.Fingerprint(item.Link)
+	return internal.CreateShortGUID(item.Link)
 }
 
 func stringWithDefault(s, def string) string {
@@ -39,4 +43,8 @@ func stringExpect(s, exp, def string) string {
 		return exp
 	}
 	return def
+}
+
+func formatName(s string) string {
+	return strings.ToLower(strings.ReplaceAll(strings.Trim(s, " "), " ", "_"))
 }

@@ -8,7 +8,6 @@ import (
 	"time"
 
 	"github.com/mmcdole/gofeed"
-	"github.com/txsvc/stdlib/v2/id"
 
 	"github.com/podops/podops"
 	"github.com/podops/podops/config"
@@ -39,10 +38,24 @@ func ImportPodcastFeed(feedUrl string) (*podops.Show, error) {
 	countFixEpisodeNumbers := 0
 	show.Episodes = make(podops.EpisodeList, len(feed.Items))
 	for i, item := range feed.Items {
-		show.Episodes[i] = importEpisode(item)
-		if show.Episodes[i].EpisodeAsInt() < 1 {
+		e := importEpisode(item)
+
+		if e.EpisodeAsInt() < 1 {
+			// incomplete numbering ?
 			countFixEpisodeNumbers++
 		}
+		if e.Image.URI == "" {
+			// re-use the shows image for the episode
+			e.Image = podops.AssetRef{
+				URI: show.Image.URI,
+				Rel: show.Image.Rel,
+			}
+		}
+		if e.Metadata.Parent == "" {
+			e.Metadata.Parent = show.Metadata.GUID
+		}
+		// finally add the episode to the array
+		show.Episodes[i] = e
 	}
 
 	// sort episodes, descending by timestamp
@@ -97,8 +110,8 @@ func importShow(feed *gofeed.Feed) podops.Show {
 
 func importShowMetadata(feed *gofeed.Feed) podops.Metadata {
 	m := podops.Metadata{
-		Name:   feed.Title,
-		GUID:   id.Fingerprint(feed.Title),
+		Name:   formatName(feed.Title),
+		GUID:   internal.CreateShortGUID(feed.Title),
 		Labels: podops.DefaultShowMetadata(),
 	}
 
@@ -235,7 +248,7 @@ func importEpisodeDescription(item *gofeed.Item) podops.EpisodeDescription {
 	ed := podops.EpisodeDescription{
 		Title:       item.Title,
 		Summary:     item.Description,
-		EpisodeText: item.Content,
+		EpisodeText: stringWithDefault(item.Content, item.Description),
 		Link: podops.AssetRef{
 			URI: item.Link,
 			Rel: podops.ResourceTypeExternal,
@@ -283,7 +296,7 @@ func importItemImageAssetRef(item *gofeed.Item) podops.AssetRef {
 
 func importEpisodeMetadata(item *gofeed.Item) podops.Metadata {
 	m := podops.Metadata{
-		Name:   item.Title,
+		Name:   formatName(item.Title),
 		GUID:   itemGUID(item),
 		Labels: podops.DefaultEpisodeMetadata(),
 	}

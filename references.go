@@ -53,8 +53,8 @@ func (r *AssetRef) MediaReference() string {
 }
 
 // CanonicalReference creates the full URI for the asset, as it can be found in the CDN
-func (r *AssetRef) CanonicalReference(cdn, parent string) string {
-	if r.Rel == ResourceTypeExternal {
+func (r *AssetRef) CanonicalReference(cdn, parent string, rewrite bool) string {
+	if r.Rel == ResourceTypeExternal && !rewrite {
 		return r.URI
 	}
 	return fmt.Sprintf("%s/%s/%s", cdn, parent, r.MediaReference())

@@ -10,8 +10,6 @@ import (
 	"github.com/podops/podops"
 	"github.com/podops/podops/client"
 	"github.com/podops/podops/config"
-
-	//"github.com/podops/podops/feed"
 	"github.com/podops/podops/internal/builder"
 	"github.com/podops/podops/internal/loader"
 )
@@ -28,11 +26,13 @@ func BuildCommand(c *cli.Context) error {
 		return err
 	}
 
-	validateOnly := boolFlag(c, "validate") // --validate
-	cleanFirst := boolFlag(c, "clean")      // --clean
-	buildOnly := boolFlag(c, "build-only")  // --build-only
+	skipValidate := boolFlag(c, "skip-validation") // --skip-validate
+	skipBuild := boolFlag(c, "skip-build")         // --skip-build
+	skipAssemble := boolFlag(c, "skip-assemble")   // --skip-assemble
+	rewrite := boolFlag(c, "rewrite")              // --rewrite
+	purge := boolFlag(c, "purge")                  // --purge
 
-	name, err := builder.Build(context.TODO(), root, validateOnly, buildOnly, cleanFirst)
+	name, err := builder.Build(context.TODO(), root, skipValidate, skipBuild, skipAssemble, rewrite, purge)
 	if err != nil {
 		return err
 	}
@@ -54,8 +54,10 @@ func AssembleCommand(c *cli.Context) error {
 	}
 
 	force := boolFlag(c, "force") // --force
+	purge := boolFlag(c, "purge") // --purge
+	overwrite := boolFlag(c, "overwrite")
 
-	err = builder.Assemble(context.TODO(), root, force)
+	err = builder.Assemble(context.TODO(), root, force, overwrite, purge)
 	if err != nil {
 		return err
 	}

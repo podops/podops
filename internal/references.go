@@ -42,3 +42,8 @@ func CreateSimpleToken() string {
 	token, _ := id.UUID()
 	return token
 }
+
+// CreateShortGUID returns the first 12 bytes of the strings hash as sudo GUID
+func CreateShortGUID(s string) string {
+	return id.Fingerprint(s)[:12]
+}

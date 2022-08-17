@@ -12,7 +12,7 @@ import (
 )
 
 // transformToPodcast transforms Show metadata into a podcast feed struct
-func transformToPodcast(s *podops.Show) (*rss.Channel, error) {
+func transformToPodcast(s *podops.Show, rewrite bool) (*rss.Channel, error) {
 	now := time.Now()
 
 	// basics
@@ -35,7 +35,7 @@ func transformToPodcast(s *podops.Show) (*rss.Channel, error) {
 		pf.AddCategory(category.Name, category.SubCategory)
 	}
 
-	pf.AddImage(s.Image.CanonicalReference(config.Settings().GetOption(config.PodopsContentEndpointEnv), s.GUID()))
+	pf.AddImage(s.Image.CanonicalReference(config.Settings().GetOption(config.PodopsContentEndpointEnv), s.GUID(), rewrite))
 	pf.IOwner = &rss.Author{
 		Name:  s.Description.Owner.Name,
 		Email: s.Description.Owner.Email,
@@ -69,7 +69,7 @@ func transformToPodcast(s *podops.Show) (*rss.Channel, error) {
 //	complete:	Yes OPTIONAL 'channel.itunes.complete' Anything else than 'Yes' has no effect
 
 // transformToItem returns the episode struct needed for a podcast feed struct
-func transformToItem(e *podops.Episode) (*rss.Item, error) {
+func transformToItem(e *podops.Episode, rewrite bool) (*rss.Item, error) {
 
 	pubDate, err := time.Parse(time.RFC1123Z, e.Metadata.Date) // FIXME this is redunant
 	if err != nil {
@@ -81,8 +81,8 @@ func transformToItem(e *podops.Episode) (*rss.Item, error) {
 		Description: e.Description.Summary,
 	}
 
-	ef.AddEnclosure(e.Enclosure.CanonicalReference(config.Settings().GetOption(config.PodopsContentEndpointEnv), e.Parent()), mediaTypeMap[e.Enclosure.Type], (int64)(e.Enclosure.Size))
-	ef.AddImage(e.Image.CanonicalReference(config.Settings().GetOption(config.PodopsContentEndpointEnv), e.Parent()))
+	ef.AddEnclosure(e.Enclosure.CanonicalReference(config.Settings().GetOption(config.PodopsContentEndpointEnv), e.Parent(), rewrite), mediaTypeMap[e.Enclosure.Type], (int64)(e.Enclosure.Size))
+	ef.AddImage(e.Image.CanonicalReference(config.Settings().GetOption(config.PodopsContentEndpointEnv), e.Parent(), rewrite))
 	ef.AddPubDate(&pubDate)
 	ef.AddSummary(e.Description.EpisodeText)
 
@@ -92,7 +92,7 @@ func transformToItem(e *podops.Episode) (*rss.Item, error) {
 		ef.AddDuration((int64)(e.Description.Duration))
 	}
 
-	ef.Link = e.Description.Link.CanonicalReference(config.Settings().GetOption(config.PodopsContentEndpointEnv), e.Parent())
+	ef.Link = e.Description.Link.CanonicalReference(config.Settings().GetOption(config.PodopsContentEndpointEnv), e.Parent(), false)
 	ef.ISubtitle = e.Description.Summary
 	ef.GUID = e.Metadata.GUID
 	ef.IExplicit = e.Metadata.Labels[podops.LabelExplicit]

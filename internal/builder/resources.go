@@ -17,16 +17,31 @@ import (
 )
 
 // ResolveResource imports or moves a resource into the local build location
-func ResolveResource(ctx context.Context, parent, root string, force bool, encl *podops.AssetRef) error {
+func ResolveResource(ctx context.Context, parent, root string, force, overwrite bool, encl *podops.AssetRef) error {
 	switch encl.Rel {
 	case podops.ResourceTypeExternal:
-		return nil // FIXME verify that the resource exits or do nothing ?
+		if force {
+			// handle as if ResourceTypeImport
+			ref := encl.Clone()
+			ref.Rel = podops.ResourceTypeImport
+
+			target := filepath.Join(root, config.BuildLocation, ref.MediaReference())
+
+			ti, err := os.Stat(target)
+			if os.IsNotExist(err) || overwrite {
+				return ImportResource(ctx, parent, root, &ref)
+			}
+
+			if ti.Size() != int64(encl.Size) {
+				return ImportResource(ctx, parent, root, &ref)
+			}
+		}
 
 	case podops.ResourceTypeImport:
 		target := filepath.Join(root, config.BuildLocation, encl.MediaReference())
 
 		ti, err := os.Stat(target)
-		if os.IsNotExist(err) || force {
+		if os.IsNotExist(err) || overwrite {
 			return ImportResource(ctx, parent, root, encl)
 		}
 
@@ -39,7 +54,7 @@ func ResolveResource(ctx context.Context, parent, root string, force bool, encl 
 		target := filepath.Join(root, config.BuildLocation, encl.MediaReference())
 
 		ti, err := os.Stat(target)
-		if os.IsNotExist(err) || force {
+		if os.IsNotExist(err) || overwrite {
 			return MoveResource(ctx, src, target)
 		}
 
@@ -117,14 +132,6 @@ func MoveResource(ctx context.Context, src, target string) error {
 	return err
 }
 
-// ValidateResource validates the existens of a local or remote resource
-func ValidateResource(ctx context.Context, parent, root string, encl *podops.AssetRef) error {
-	if encl.Rel == podops.ResourceTypeLocal {
-		return validateLocal(parent, root, encl)
-	}
-	return validateRemote(ctx, parent, root, encl)
-}
-
 func LoadAssetRef(path string) (*podops.AssetRef, error) {
 	var asset podops.AssetRef
 
@@ -139,6 +146,14 @@ func LoadAssetRef(path string) (*podops.AssetRef, error) {
 	}
 
 	return &asset, nil
+}
+
+// ValidateResource validates the existens of a local or remote resource
+func ValidateResource(ctx context.Context, parent, root string, encl *podops.AssetRef) error {
+	if encl.Rel == podops.ResourceTypeLocal {
+		return validateLocal(parent, root, encl)
+	}
+	return validateRemote(ctx, parent, root, encl)
 }
 
 // validateLocal validates that the referenced resource exists on the filesystem
@@ -162,7 +177,6 @@ func validateLocal(parent, root string, encl *podops.AssetRef) error {
 	// asset file
 	enclosurePath := filepath.Join(root, config.BuildLocation, fmt.Sprintf("%s.yaml", encl.AssetReference(parent)))
 	return loader.WriteResource(context.TODO(), enclosurePath, encl)
-
 }
 
 // validateRemote validates that the referenced resource can be reached ("pinged")
